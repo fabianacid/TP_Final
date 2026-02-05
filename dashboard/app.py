@@ -109,6 +109,56 @@ def register(username: str, email: str, password: str) -> bool:
         return False
 
 
+def forgot_password(email: str) -> tuple[bool, str]:
+    """Solicita recuperación de contraseña."""
+    try:
+        response = requests.post(
+            f"{API_URL}/auth/forgot-password",
+            json={"email": email}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return True, data.get("message", "Email enviado")
+        return False, "Error al procesar solicitud"
+    except Exception as e:
+        return False, f"Error de conexión: {str(e)}"
+
+
+def reset_password(token: str, new_password: str) -> tuple[bool, str]:
+    """Resetea contraseña con token."""
+    try:
+        response = requests.post(
+            f"{API_URL}/auth/reset-password",
+            json={"token": token, "new_password": new_password}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return True, data.get("message", "Contraseña actualizada")
+        else:
+            error_detail = response.json().get("detail", "Token inválido o expirado")
+            return False, error_detail
+    except Exception as e:
+        return False, f"Error: {str(e)}"
+
+
+def change_password(current_password: str, new_password: str) -> tuple[bool, str]:
+    """Cambia contraseña del usuario autenticado."""
+    try:
+        response = requests.put(
+            f"{API_URL}/auth/change-password",
+            headers=get_headers(),
+            json={"current_password": current_password, "new_password": new_password}
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return True, data.get("message", "Contraseña actualizada")
+        else:
+            error_detail = response.json().get("detail", "Contraseña actual incorrecta")
+            return False, error_detail
+    except Exception as e:
+        return False, f"Error: {str(e)}"
+
+
 def get_headers() -> Dict[str, str]:
     """Retorna headers con token de autenticación."""
     if "token" in st.session_state:
@@ -180,6 +230,11 @@ def render_login_form():
             else:
                 st.warning("Complete todos los campos")
 
+    # Link de recuperación de contraseña
+    if st.button("¿Olvidaste tu contraseña?", use_container_width=True, type="secondary"):
+        st.session_state.auth_view = "forgot_password"
+        st.rerun()
+
 
 def render_register_form():
     """Renderiza el formulario de registro."""
@@ -206,17 +261,137 @@ def render_register_form():
                     st.error("Error al crear cuenta. El usuario puede ya existir.")
 
 
+def render_forgot_password_form():
+    """Renderiza el formulario de recuperación de contraseña."""
+    st.subheader("🔐 Recuperar Contraseña")
+    st.markdown("Ingresa tu email y te enviaremos instrucciones para resetear tu contraseña.")
+
+    with st.form("forgot_password_form"):
+        email = st.text_input("Email registrado", placeholder="tu_email@example.com")
+        submitted = st.form_submit_button("Enviar Instrucciones", use_container_width=True, type="primary")
+
+        if submitted:
+            if email:
+                success, message = forgot_password(email)
+                if success:
+                    st.success(message)
+                    st.info("Si tu email está registrado, recibirás un link de recuperación. Revisa tu bandeja de entrada y spam.")
+                    st.info("⏰ El link expira en 1 hora por seguridad.")
+
+                    # Mostrar campo para ingresar token si SMTP no está configurado
+                    st.markdown("---")
+                    st.warning("💡 Si no configuraste SMTP, el token aparece en los logs del backend. Puedes usarlo manualmente:")
+                    if st.button("Tengo el token, resetear ahora"):
+                        st.session_state.auth_view = "reset_password"
+                        st.rerun()
+                else:
+                    st.info(message)
+            else:
+                st.warning("Ingresa tu email")
+
+    st.markdown("---")
+    if st.button("← Volver al login", use_container_width=True):
+        st.session_state.auth_view = "login"
+        st.rerun()
+
+
+def render_reset_password_form():
+    """Renderiza el formulario de reseteo de contraseña con token."""
+    st.subheader("🔑 Resetear Contraseña")
+    st.markdown("Ingresa el token que recibiste por email y tu nueva contraseña.")
+
+    with st.form("reset_password_form"):
+        token = st.text_input("Token de recuperación", placeholder="Token de 64 caracteres", help="Copia el token del email o de los logs del backend")
+        new_password = st.text_input("Nueva contraseña", type="password", placeholder="Mínimo 6 caracteres")
+        new_password2 = st.text_input("Confirmar nueva contraseña", type="password")
+        submitted = st.form_submit_button("Actualizar Contraseña", use_container_width=True, type="primary")
+
+        if submitted:
+            if not all([token, new_password, new_password2]):
+                st.warning("Complete todos los campos")
+            elif new_password != new_password2:
+                st.error("Las contraseñas no coinciden")
+            elif len(new_password) < 6:
+                st.error("La contraseña debe tener al menos 6 caracteres")
+            else:
+                success, message = reset_password(token, new_password)
+                if success:
+                    st.success(message)
+                    st.success("✅ Contraseña actualizada exitosamente. Ya puedes iniciar sesión.")
+                    st.balloons()
+                    # Volver al login después de 2 segundos
+                    import time
+                    time.sleep(2)
+                    st.session_state.auth_view = "login"
+                    st.rerun()
+                else:
+                    st.error(f"❌ {message}")
+                    st.info("Verifica que el token sea correcto y no haya expirado (1 hora de validez).")
+
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("← Volver al login", use_container_width=True):
+            st.session_state.auth_view = "login"
+            st.rerun()
+    with col2:
+        if st.button("Solicitar nuevo token", use_container_width=True):
+            st.session_state.auth_view = "forgot_password"
+            st.rerun()
+
+
+def render_change_password_section():
+    """Renderiza la sección de cambio de contraseña para usuarios autenticados."""
+    st.subheader("🔒 Cambiar Contraseña")
+    st.markdown("Actualiza tu contraseña de forma segura.")
+
+    with st.form("change_password_form"):
+        current_password = st.text_input("Contraseña actual", type="password")
+        new_password = st.text_input("Nueva contraseña", type="password", placeholder="Mínimo 6 caracteres")
+        new_password2 = st.text_input("Confirmar nueva contraseña", type="password")
+        submitted = st.form_submit_button("Actualizar Contraseña", use_container_width=True, type="primary")
+
+        if submitted:
+            if not all([current_password, new_password, new_password2]):
+                st.warning("Complete todos los campos")
+            elif new_password != new_password2:
+                st.error("Las contraseñas nuevas no coinciden")
+            elif len(new_password) < 6:
+                st.error("La contraseña debe tener al menos 6 caracteres")
+            elif current_password == new_password:
+                st.warning("La nueva contraseña debe ser diferente a la actual")
+            else:
+                success, message = change_password(current_password, new_password)
+                if success:
+                    st.success(message)
+                    st.success("✅ Tu contraseña ha sido actualizada exitosamente.")
+                    st.info("Por seguridad, tu sesión seguirá activa con el token actual.")
+                else:
+                    st.error(f"❌ {message}")
+
+
 def render_auth_page():
     """Renderiza la página de autenticación."""
     st.markdown("<h1 class='main-header'>Sistema de Alertas Financieras</h1>", unsafe_allow_html=True)
     st.markdown("Plataforma de análisis predictivo para inversores")
     st.markdown("---")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        render_login_form()
-    with col2:
-        render_register_form()
+    # Inicializar vista de autenticación si no existe
+    if "auth_view" not in st.session_state:
+        st.session_state.auth_view = "login"
+
+    # Renderizar según la vista seleccionada
+    if st.session_state.auth_view == "forgot_password":
+        render_forgot_password_form()
+    elif st.session_state.auth_view == "reset_password":
+        render_reset_password_form()
+    else:
+        # Vista por defecto: login y registro
+        col1, col2 = st.columns(2)
+        with col1:
+            render_login_form()
+        with col2:
+            render_register_form()
 
 
 def render_sidebar():
@@ -277,6 +452,14 @@ def render_sidebar():
         st.session_state.umbral_critical = umbral_critical
 
         st.caption(f"Advertencia: >{umbral_warning}% | Crítico: >{umbral_critical}%")
+
+        st.markdown("---")
+
+        # Sección de configuración de cuenta
+        st.markdown("**Configuración de Cuenta**")
+
+        with st.expander("🔒 Cambiar Contraseña"):
+            render_change_password_section()
 
         st.markdown("---")
         if st.button("Cerrar Sesión", use_container_width=True):
