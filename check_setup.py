@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Script de verificación de instalación y configuración
 Sistema Multiagente de Seguimiento Financiero
@@ -10,6 +11,11 @@ import sys
 import os
 from pathlib import Path
 
+# Configurar encoding para Windows
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
 def print_header(title):
     """Imprime un encabezado formateado"""
     print("\n" + "=" * 60)
@@ -18,12 +24,24 @@ def print_header(title):
 
 def print_check(item, status, message=""):
     """Imprime el resultado de una verificación"""
-    icon = "✅" if status else "❌"
-    print(f"{icon} {item}", end="")
-    if message:
-        print(f": {message}")
-    else:
-        print()
+    try:
+        icon = "✅" if status else "❌"
+    except:
+        icon = "[OK]" if status else "[X]"
+
+    try:
+        print(f"{icon} {item}", end="")
+        if message:
+            print(f": {message}")
+        else:
+            print()
+    except UnicodeEncodeError:
+        icon = "[OK]" if status else "[X]"
+        print(f"{icon} {item}", end="")
+        if message:
+            print(f": {message}")
+        else:
+            print()
 
 def check_python_version():
     """Verifica la versión de Python"""
@@ -50,7 +68,7 @@ def check_dependencies():
         "pydantic": "Pydantic",
         "pandas": "Pandas",
         "numpy": "NumPy",
-        "scikit-learn": "scikit-learn",
+        "sklearn": "scikit-learn",
         "yfinance": "yfinance",
         "streamlit": "Streamlit",
     }
@@ -115,9 +133,9 @@ def check_env_file():
     print_check("Archivo .env existe", env_exists)
 
     if not env_exists:
-        print("\n⚠️  ADVERTENCIA: Archivo .env no encontrado")
-        print("   Ejecuta: cp .env.example .env")
-        print("   Y configura SECRET_KEY con una clave segura")
+        print("\n[!] ADVERTENCIA: Archivo .env no encontrado")
+        print("    Ejecuta: cp .env.example .env")
+        print("    Y configura SECRET_KEY con una clave segura")
         return False
 
     # Verificar contenido básico
@@ -131,9 +149,9 @@ def check_env_file():
         print_check("SECRET_KEY configurado", has_secret)
 
         if has_default:
-            print("⚠️  ADVERTENCIA: SECRET_KEY parece usar el valor por defecto")
-            print("   Genera una clave segura con:")
-            print("   python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
+            print("[!] ADVERTENCIA: SECRET_KEY parece usar el valor por defecto")
+            print("    Genera una clave segura con:")
+            print("    python -c \"import secrets; print(secrets.token_urlsafe(32))\"")
 
         return has_secret
     except Exception as e:
@@ -204,10 +222,15 @@ Documentación completa: README.md
 
 def main():
     """Función principal"""
-    print("\n" + "🔍 " * 20)
+    try:
+        separator = "🔍 " * 20
+    except:
+        separator = "=" * 60
+
+    print("\n" + separator)
     print("   VERIFICACIÓN DE INSTALACIÓN")
     print("   Sistema Multiagente de Seguimiento Financiero")
-    print("🔍 " * 20)
+    print(separator)
 
     results = []
 
@@ -227,14 +250,14 @@ def main():
     critical_passed = results[0][1] and results[1][1] and results[3][1]  # Python, deps, env
 
     if all_passed:
-        print("✅ ¡Todo está configurado correctamente!")
-        print("   El sistema está listo para ejecutarse.")
+        print("[OK] ¡Todo está configurado correctamente!")
+        print("     El sistema está listo para ejecutarse.")
     elif critical_passed:
-        print("⚠️  Configuración parcial detectada")
-        print("   El sistema puede ejecutarse, pero revisa las advertencias arriba.")
+        print("[!]  Configuración parcial detectada")
+        print("     El sistema puede ejecutarse, pero revisa las advertencias arriba.")
     else:
-        print("❌ Se encontraron problemas críticos")
-        print("   Corrige los errores marcados con ❌ antes de ejecutar.")
+        print("[X]  Se encontraron problemas críticos")
+        print("     Corrige los errores marcados antes de ejecutar.")
 
     # Mostrar recomendaciones si hay problemas
     if not all_passed:
