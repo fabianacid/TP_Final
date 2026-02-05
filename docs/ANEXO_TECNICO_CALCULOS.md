@@ -29,9 +29,13 @@ intervalo = 1 día
 datos = {precio_apertura, precio_cierre, precio_máximo, precio_mínimo, volumen}
 ```
 
-### 1.2 Indicadores Técnicos
+### 1.2 Indicadores Técnicos Implementados
 
-#### 1.2.1 RSI (Relative Strength Index)
+El sistema calcula **más de 35 indicadores técnicos** organizados en 4 categorías:
+
+#### 1.2.1 Indicadores de Tendencia
+
+##### RSI (Relative Strength Index)
 
 **Concepto**: Mide la velocidad y magnitud de cambios de precio para identificar condiciones de sobrecompra/sobreventa.
 
@@ -65,16 +69,16 @@ período = 14 días (estándar)
 Ganancias últimos 14 días: [0.5, 1.2, 0.8, 0, 0, 0.3, 1.1, 0.9, 0.6, 0, 0.4, 0.7, 0.5, 0.8]
 Pérdidas últimos 14 días:  [0, 0, 0, 0.4, 0.6, 0, 0, 0, 0, 0.5, 0, 0, 0, 0]
 
-Ganancia_promedio = (0.5+1.2+0.8+0.3+1.1+0.9+0.6+0.4+0.7+0.5+0.8) / 14 = 0.56
-Pérdida_promedio = (0.4+0.6+0.5) / 14 = 0.11
+Ganancia_promedio = 0.56
+Pérdida_promedio = 0.11
 
 RS = 0.56 / 0.11 = 5.09
-RSI = 100 - (100 / (1 + 5.09)) = 100 - 16.4 = 83.6
+RSI = 100 - (100 / (1 + 5.09)) = 83.6
 
 Resultado: RSI = 83.6 → SOBRECOMPRA
 ```
 
-#### 1.2.2 MACD (Moving Average Convergence Divergence)
+##### MACD (Moving Average Convergence Divergence)
 
 **Concepto**: Indicador de momentum que muestra la relación entre dos medias móviles exponenciales.
 
@@ -104,155 +108,20 @@ Para EMA(26): multiplicador = 2 / 27 = 0.0741
 - MACD_histogram > 0 → Momentum positivo
 - MACD_histogram < 0 → Momentum negativo
 
-**Ejemplo**:
+##### Medias Móviles
+
+**Fórmulas implementadas**:
 ```
-EMA(12) = $150.50
-EMA(26) = $148.20
-MACD_line = 150.50 - 148.20 = 2.30
+SMA(n) = (P₁ + P₂ + ... + Pₙ) / n
 
-EMA(9) del MACD = 1.80
-Signal_line = 1.80
-
-MACD_histogram = 2.30 - 1.80 = 0.50
-
-Interpretación: MACD positivo y creciente → MOMENTUM ALCISTA
+EMA(n): Como se describió arriba
 ```
 
-#### 1.2.3 Bandas de Bollinger
+**Sistema implementa**:
+- SMA(20), SMA(50), SMA(200)
+- EMA(12), EMA(26), EMA(50)
 
-**Concepto**: Miden la volatilidad y niveles de sobrecompra/sobreventa basándose en desviación estándar.
-
-**Fórmulas**:
-```
-Banda_Media = SMA(20)
-Banda_Superior = SMA(20) + (2 × σ)
-Banda_Inferior = SMA(20) - (2 × σ)
-
-donde:
-SMA(20) = Media Móvil Simple de 20 períodos
-σ = Desviación Estándar de 20 períodos
-```
-
-**Cálculo de SMA**:
-```
-SMA(20) = (P₁ + P₂ + ... + P₂₀) / 20
-```
-
-**Cálculo de Desviación Estándar**:
-```
-σ = √[Σ(Pᵢ - SMA)² / n]
-
-donde n = 20
-```
-
-**Interpretación**:
-- Precio cerca de Banda_Superior → Sobrecompra
-- Precio cerca de Banda_Inferior → Sobreventa
-- Bandas estrechas → Baja volatilidad (posible ruptura próxima)
-- Bandas amplias → Alta volatilidad
-
-**Ejemplo**:
-```
-Precios últimos 20 días: [145, 147, 148, 146, 149, 151, 150, 152, 153, 151,
-                          154, 155, 153, 156, 157, 155, 158, 159, 157, 160]
-
-SMA(20) = Σ precios / 20 = 3020 / 20 = 151
-
-Cálculo de σ:
-Varianza = [(145-151)² + (147-151)² + ... + (160-151)²] / 20
-         = [36 + 16 + 9 + 25 + 4 + 0 + 1 + 1 + 4 + 0 + 9 + 16 + 4 + 25 + 36 + 16 + 49 + 64 + 36 + 81] / 20
-         = 432 / 20 = 21.6
-σ = √21.6 = 4.65
-
-Banda_Superior = 151 + (2 × 4.65) = 151 + 9.3 = 160.3
-Banda_Inferior = 151 - (2 × 4.65) = 151 - 9.3 = 141.7
-
-Precio_actual = 160
-Posición = (160 - 141.7) / (160.3 - 141.7) = 18.3 / 18.6 = 0.98
-
-Interpretación: Precio al 98% del rango → SOBRECOMPRA
-```
-
-#### 1.2.4 ATR (Average True Range)
-
-**Concepto**: Mide la volatilidad del mercado calculando el rango promedio de movimiento del precio.
-
-**Fórmula**:
-```
-True_Range = max(
-    Alto - Bajo,
-    |Alto - Cierre_anterior|,
-    |Bajo - Cierre_anterior|
-)
-
-ATR = Media móvil del True_Range (14 períodos)
-```
-
-**Cálculo paso a paso**:
-```
-Para cada día i:
-TR_i = max(
-    Alto_i - Bajo_i,
-    |Alto_i - Cierre_(i-1)|,
-    |Bajo_i - Cierre_(i-1)|
-)
-
-ATR = (TR₁ + TR₂ + ... + TR₁₄) / 14
-```
-
-**Ejemplo**:
-```
-Día actual:
-Alto = $152.50
-Bajo = $148.20
-Cierre_anterior = $150.00
-
-TR = max(
-    152.50 - 148.20 = 4.30,
-    |152.50 - 150.00| = 2.50,
-    |148.20 - 150.00| = 1.80
-) = 4.30
-
-Si el ATR de 14 días = $3.75
-→ Volatilidad moderada-alta
-```
-
-#### 1.2.5 OBV (On-Balance Volume)
-
-**Concepto**: Indicador de momentum que relaciona volumen con cambio de precio.
-
-**Fórmula**:
-```
-Si Cierre_hoy > Cierre_ayer:
-    OBV = OBV_ayer + Volumen_hoy
-
-Si Cierre_hoy < Cierre_ayer:
-    OBV = OBV_ayer - Volumen_hoy
-
-Si Cierre_hoy = Cierre_ayer:
-    OBV = OBV_ayer
-```
-
-**Interpretación**:
-- OBV creciente + precio creciente → Tendencia alcista confirmada
-- OBV decreciente + precio decreciente → Tendencia bajista confirmada
-- Divergencia (OBV ↑ pero precio ↓) → Posible reversión alcista
-
-#### 1.2.6 Ratio de Volumen
-
-**Fórmula**:
-```
-Ratio_Volumen = Volumen_actual / Volumen_promedio(20_días)
-
-Volumen_promedio = Σ(Volumen_i) / 20
-```
-
-**Interpretación**:
-- Ratio > 2.0: Volumen muy alto (posible confirmación de tendencia)
-- Ratio 1.0-2.0: Volumen normal-alto
-- Ratio < 0.5: Volumen bajo (falta de convicción)
-
-#### 1.2.7 ADX (Average Directional Index)
+##### ADX (Average Directional Index)
 
 **Concepto**: Mide la fuerza de la tendencia (no su dirección).
 
@@ -273,7 +142,117 @@ ADX = EMA(DX, 14)
 - ADX < 20: Tendencia débil o mercado lateral
 - ADX > 50: Tendencia muy fuerte
 
-#### 1.2.8 MFI (Money Flow Index)
+##### Indicadores Adicionales de Tendencia
+
+El sistema también calcula:
+
+- **Ichimoku Cloud**: Señales de Tenkan-sen y Kijun-sen
+- **Parabolic SAR**: Detección de reversiones de tendencia
+- **CCI** (Commodity Channel Index): Identificación de ciclos
+
+#### 1.2.2 Indicadores de Momentum
+
+##### Stochastic Oscillator
+
+**Fórmulas**:
+```
+%K = (Precio_cierre - Mínimo_14días) / (Máximo_14días - Mínimo_14días) × 100
+%D = SMA(%K, 3)
+```
+
+**Interpretación**:
+- %K > 80: Sobrecompra
+- %K < 20: Sobreventa
+
+##### Otros Momentum
+
+- **Williams %R**: Similar a Stochastic pero invertido
+- **ROC** (Rate of Change): Velocidad del cambio de precio
+
+#### 1.2.3 Indicadores de Volatilidad
+
+##### Bandas de Bollinger
+
+**Concepto**: Miden la volatilidad y niveles de sobrecompra/sobreventa basándose en desviación estándar.
+
+**Fórmulas**:
+```
+Banda_Media = SMA(20)
+Banda_Superior = SMA(20) + (2 × σ)
+Banda_Inferior = SMA(20) - (2 × σ)
+Banda_Width = Banda_Superior - Banda_Inferior
+Bollinger_%B = (Precio - Banda_Inferior) / (Banda_Superior - Banda_Inferior)
+
+donde:
+σ = Desviación Estándar de 20 períodos
+```
+
+**Interpretación**:
+- Precio cerca de Banda_Superior → Sobrecompra
+- Precio cerca de Banda_Inferior → Sobreventa
+- %B > 1: Por encima de banda superior
+- %B < 0: Por debajo de banda inferior
+
+##### ATR (Average True Range)
+
+**Concepto**: Mide la volatilidad del mercado.
+
+**Fórmula**:
+```
+True_Range = max(
+    Alto - Bajo,
+    |Alto - Cierre_anterior|,
+    |Bajo - Cierre_anterior|
+)
+
+ATR = EMA(True_Range, 14)
+ATR_% = (ATR / Precio_cierre) × 100
+```
+
+##### Keltner Channels
+
+**Fórmulas**:
+```
+Keltner_Middle = EMA(20)
+Keltner_Upper = EMA(20) + (2 × ATR)
+Keltner_Lower = EMA(20) - (2 × ATR)
+```
+
+#### 1.2.4 Indicadores de Volumen
+
+##### OBV (On-Balance Volume)
+
+**Concepto**: Indicador de momentum que relaciona volumen con cambio de precio.
+
+**Fórmula**:
+```
+Si Cierre_hoy > Cierre_ayer:
+    OBV = OBV_ayer + Volumen_hoy
+
+Si Cierre_hoy < Cierre_ayer:
+    OBV = OBV_ayer - Volumen_hoy
+
+Si Cierre_hoy = Cierre_ayer:
+    OBV = OBV_ayer
+```
+
+**Tendencia del OBV**:
+```
+OBV_trend = "alcista" si OBV > EMA(OBV, 20)
+          = "bajista" si OBV < EMA(OBV, 20)
+```
+
+##### VWAP (Volume Weighted Average Price)
+
+**Fórmula**:
+```
+VWAP = Σ(Precio_típico × Volumen) / Σ(Volumen)
+
+donde:
+Precio_típico = (Alto + Bajo + Cierre) / 3
+```
+
+##### MFI (Money Flow Index)
 
 **Concepto**: RSI ponderado por volumen, mide presión compradora/vendedora.
 
@@ -282,8 +261,8 @@ ADX = EMA(DX, 14)
 Precio_típico = (Alto + Bajo + Cierre) / 3
 Flujo_monetario = Precio_típico × Volumen
 
-Flujo_positivo = Σ(Flujo_monetario cuando Precio_típico ↑)
-Flujo_negativo = Σ(Flujo_monetario cuando Precio_típico ↓)
+Flujo_positivo = Σ(Flujo cuando Precio_típico ↑)
+Flujo_negativo = Σ(Flujo cuando Precio_típico ↓)
 
 Ratio_flujo = Flujo_positivo / Flujo_negativo
 
@@ -293,7 +272,11 @@ MFI = 100 - (100 / (1 + Ratio_flujo))
 **Interpretación**:
 - MFI > 80: Sobrecompra
 - MFI < 20: Sobreventa
-- Similar al RSI pero considera volumen
+
+##### Indicadores Adicionales de Volumen
+
+- **ADL** (Accumulation/Distribution Line)
+- **CMF** (Chaikin Money Flow)
 
 ### 1.3 Detección de Régimen de Mercado
 
@@ -314,43 +297,81 @@ else:
 
 ### 1.4 Señal de Mercado Unificada
 
-**Algoritmo de votación ponderada**:
+**Algoritmo de votación ponderada multi-factor**:
+
+El sistema evalúa múltiples señales de diferentes categorías y las combina con pesos específicos:
+
 ```python
-señales = {
-    'RSI': (-1 si RSI>70, +1 si RSI<30, 0 si neutral),
-    'MACD': (+1 si MACD>signal, -1 si MACD<signal),
-    'Bollinger': (-1 si precio>banda_sup, +1 si precio<banda_inf, 0 neutral),
-    'Volumen': (+0.5 si ratio>1.5 y precio↑, -0.5 si ratio>1.5 y precio↓)
+# SEÑALES TÉCNICAS
+señales_técnicas = {
+    'RSI': señal_rsi,           # -1, 0, +1
+    'MACD': señal_macd,         # -1, 0, +1
+    'Bollinger': señal_bb,      # -1, 0, +1
+    'Stochastic': señal_stoch,  # -1, 0, +1
 }
 
+# SEÑALES DE TENDENCIA
+señales_tendencia = {
+    'SMA_cross': señal_sma,     # -1, 0, +1
+    'EMA_cross': señal_ema,     # -1, 0, +1
+    'ADX': señal_adx,           # -1, 0, +1
+}
+
+# SEÑALES DE VOLUMEN
+señales_volumen = {
+    'OBV': señal_obv,           # -1, 0, +1
+    'MFI': señal_mfi,           # -1, 0, +1
+}
+
+# PESOS POR CATEGORÍA
 pesos = {
-    'RSI': 0.3,
-    'MACD': 0.4,
-    'Bollinger': 0.2,
-    'Volumen': 0.1
+    'técnicas': 0.40,
+    'tendencia': 0.35,
+    'volumen': 0.25
 }
 
-score_ponderado = Σ(señal_i × peso_i)
+# CÁLCULO DEL SCORE FINAL
+score_técnicas = promedio(señales_técnicas)
+score_tendencia = promedio(señales_tendencia)
+score_volumen = promedio(señales_volumen)
 
-if score_ponderado > 0.2:
-    señal_final = "alcista"
-elif score_ponderado < -0.2:
-    señal_final = "bajista"
+score_final = (score_técnicas × 0.40) +
+              (score_tendencia × 0.35) +
+              (score_volumen × 0.25)
+
+# CLASIFICACIÓN
+if score_final > 0.3:
+    señal = "alcista"
+elif score_final < -0.3:
+    señal = "bajista"
 else:
-    señal_final = "neutral"
+    señal = "neutral"
 ```
 
 **Ejemplo completo**:
 ```
-RSI = 65 → señal = 0 (neutral)
-MACD = 2.3, Signal = 1.8 → MACD > Signal → señal = +1
-Precio = 155, Banda_sup = 160, Banda_inf = 142 → señal = 0
-Ratio_volumen = 1.8, Precio ↑ → señal = +0.5
+Señales técnicas:
+- RSI = 65 → neutral (0)
+- MACD > Signal → alcista (+1)
+- Precio en medio de Bollinger → neutral (0)
+- Stochastic = 75 → sobrecompra (-0.5)
+Score técnicas = (0 + 1 + 0 - 0.5) / 4 = 0.125
 
-score = (0 × 0.3) + (1 × 0.4) + (0 × 0.2) + (0.5 × 0.1)
-      = 0 + 0.4 + 0 + 0.05 = 0.45
+Señales tendencia:
+- SMA(20) > SMA(50) → alcista (+1)
+- EMA(12) > EMA(26) → alcista (+1)
+- ADX = 30, +DI > -DI → alcista (+1)
+Score tendencia = (1 + 1 + 1) / 3 = 1.0
 
-0.45 > 0.2 → Señal = "ALCISTA"
+Señales volumen:
+- OBV tendencia alcista → alcista (+1)
+- MFI = 55 → neutral (0)
+Score volumen = (1 + 0) / 2 = 0.5
+
+Score final = (0.125 × 0.40) + (1.0 × 0.35) + (0.5 × 0.25)
+            = 0.050 + 0.350 + 0.125 = 0.525
+
+0.525 > 0.3 → Señal = "ALCISTA"
 ```
 
 ---
@@ -368,20 +389,105 @@ score = (0 × 0.3) + (1 × 0.4) + (0 × 0.2) + (0.5 × 0.1)
 
 ### 2.2 Features (Variables de Entrada)
 
-**Features técnicos** (ventana de 30 días):
-```
-X = [
-    RSI, MACD, MACD_signal, ATR, OBV,
-    BB_upper, BB_lower, BB_width,
-    SMA_20, EMA_12, EMA_26,
-    Volumen_ratio, ADX, MFI,
-    Precio_lag_1, Precio_lag_2, Precio_lag_3,
-    Retorno_1d, Retorno_5d, Retorno_10d,
-    Volatilidad_20d
+**El sistema utiliza más de 30 features** organizadas en categorías:
+
+#### 2.2.1 Features de Precio
+
+```python
+# Precios base
+features_precio = [
+    'Close',        # Precio de cierre
+    'High',         # Precio máximo
+    'Low',          # Precio mínimo
+    'Open'          # Precio de apertura
 ]
 
-Total features: 21 variables
+# Lags de precio (valores pasados)
+features_lags = [
+    'Close_lag_1',  # Precio hace 1 día
+    'Close_lag_2',  # Precio hace 2 días
+    'Close_lag_3'   # Precio hace 3 días
+]
+
+# Retornos (cambios porcentuales)
+features_retornos = [
+    'Return_1d',    # Retorno 1 día
+    'Return_5d',    # Retorno 5 días
+    'Return_10d',   # Retorno 10 días
+    'Return_20d'    # Retorno 20 días
+]
 ```
+
+#### 2.2.2 Features de Tendencia
+
+```python
+features_tendencia = [
+    'SMA_20',       # Media móvil simple 20 días
+    'SMA_50',       # Media móvil simple 50 días
+    'EMA_12',       # Media móvil exponencial 12 días
+    'EMA_26',       # Media móvil exponencial 26 días
+    'MACD',         # MACD line
+    'MACD_signal'   # MACD signal line
+]
+```
+
+#### 2.2.3 Features de Momentum
+
+```python
+features_momentum = [
+    'RSI',              # Relative Strength Index
+    'Stochastic_K',     # Stochastic %K
+    'Williams_R'        # Williams %R
+]
+```
+
+#### 2.2.4 Features de Volatilidad
+
+```python
+features_volatilidad = [
+    'ATR',              # Average True Range
+    'Bollinger_upper',  # Banda de Bollinger superior
+    'Bollinger_lower',  # Banda de Bollinger inferior
+    'Bollinger_width',  # Ancho de Bollinger
+    'Bollinger_pct',    # %B de Bollinger
+    'Volatility_20d',   # Volatilidad histórica 20 días
+    'Volatility_5d',    # Volatilidad histórica 5 días
+    'Volatility_10d'    # Volatilidad histórica 10 días
+]
+```
+
+#### 2.2.5 Features de Volumen
+
+```python
+features_volumen = [
+    'Volume',           # Volumen
+    'OBV',             # On-Balance Volume
+    'Volume_ratio'     # Volumen vs promedio
+]
+```
+
+#### 2.2.6 Features Temporales
+
+```python
+features_temporales = [
+    'day_of_week',     # Día de la semana (0-6)
+    'month',           # Mes del año (1-12)
+    'quarter'          # Trimestre (1-4)
+]
+```
+
+#### 2.2.7 Features de Patrones
+
+```python
+features_patrones = [
+    'higher_high',     # ¿Máximo más alto que anterior?
+    'lower_low',       # ¿Mínimo más bajo que anterior?
+    'distance_from_high_20d',  # Distancia del máximo de 20 días
+    'distance_from_low_20d'    # Distancia del mínimo de 20 días
+]
+```
+
+**Total**: 30+ features
 
 ### 2.3 Target (Variable Objetivo)
 
@@ -397,7 +503,7 @@ Total datos: últimos 6 meses (≈126 días de trading)
 Train set: primeros 80% (≈100 días)
 Test set: últimos 20% (≈26 días)
 
-Validación temporal: Sin shuffle (mantener orden cronológico)
+Validación: Time Series Cross-Validation con 3 folds
 ```
 
 ### 2.5 Configuración de Modelos
@@ -410,6 +516,7 @@ Hiperparámetros:
 - max_depth = 15
 - min_samples_split = 5
 - min_samples_leaf = 2
+- max_features = 'sqrt'
 - random_state = 42
 ```
 
@@ -427,10 +534,11 @@ Hiperparámetros:
 - learning_rate = 0.1
 - subsample = 0.8
 - colsample_bytree = 0.8
+- objective = 'reg:squarederror'
 - random_state = 42
 ```
 
-**Algoritmo**:
+**Algoritmo Gradient Boosting**:
 ```
 F₀(x) = ȳ  (predicción inicial = media)
 
@@ -450,10 +558,11 @@ Hiperparámetros:
 - max_depth = 6
 - learning_rate = 0.1
 - num_leaves = 31
+- min_child_samples = 20
 - random_state = 42
 ```
 
-**Diferencia con XGBoost**: Construye árboles leaf-wise (más profundo) en vez de level-wise.
+**Diferencia con XGBoost**: Construye árboles leaf-wise (más profundo) en vez de level-wise (más balanceado).
 
 #### 2.5.4 Gradient Boosting
 
@@ -463,6 +572,7 @@ Hiperparámetros:
 - max_depth = 5
 - learning_rate = 0.1
 - subsample = 0.8
+- min_samples_split = 5
 - random_state = 42
 ```
 
@@ -471,6 +581,7 @@ Hiperparámetros:
 ```python
 Hiperparámetros:
 - alpha = 1.0  (regularización L2)
+- max_iter = 1000
 ```
 
 **Fórmula**:
@@ -486,45 +597,62 @@ donde:
 
 ### 2.6 Predicción del Ensemble
 
-**Método 1: Promedio Ponderado por Rendimiento**
+**Método: Promedio Ponderado por Rendimiento Inverso**
 
 ```python
-Paso 1: Obtener predicción de cada modelo
-pred_rf = modelo_rf.predict(X_test)
-pred_xgb = modelo_xgb.predict(X_test)
-pred_lgbm = modelo_lgbm.predict(X_test)
-pred_gb = modelo_gb.predict(X_test)
-pred_ridge = modelo_ridge.predict(X_test)
+Paso 1: Entrenar cada modelo con validación cruzada
+for modelo in [RF, XGB, LGBM, GB, Ridge]:
+    for fold in time_series_cv(n_splits=3):
+        modelo.fit(X_train_fold, y_train_fold)
+        pred = modelo.predict(X_val_fold)
+        calcular métricas (RMSE, MAE, MAPE, R²)
 
-Paso 2: Calcular RMSE de cada modelo en validación
-rmse_rf = RMSE(y_val, pred_rf_val)
-rmse_xgb = RMSE(y_val, pred_xgb_val)
-... (similar para otros)
+Paso 2: Calcular RMSE promedio de cada modelo
+rmse_rf = promedio(rmse_folds_rf)
+rmse_xgb = promedio(rmse_folds_xgb)
+...
 
 Paso 3: Convertir RMSE a pesos (mejor modelo = mayor peso)
 peso_i = (1 / rmse_i) / Σ(1 / rmse_j)
 
-Paso 4: Predicción final
+Paso 4: Entrenar modelos con todos los datos
+for modelo in modelos:
+    modelo.fit(X_completo, y_completo)
+
+Paso 5: Predicción final ponderada
+pred_rf = modelo_rf.predict(X_nuevo)
+pred_xgb = modelo_xgb.predict(X_nuevo)
+...
+
 predicción_final = Σ(peso_i × pred_i)
 ```
 
-**Ejemplo**:
+**Ejemplo numérico**:
 ```
+VALIDACIÓN CRUZADA:
+Modelo          Fold1   Fold2   Fold3   RMSE_avg
+Random Forest   5.20    5.10    5.30    5.20
+XGBoost         4.80    4.90    4.70    4.80
+LightGBM        4.95    5.00    4.90    4.95
+Gradient Boost  5.10    5.20    5.00    5.10
+Ridge           9.50    9.60    9.40    9.50
+
+CÁLCULO DE PESOS:
 Modelo          RMSE    1/RMSE   Peso (normalizado)
 Random Forest   5.20    0.192    0.23 (23%)
-XGBoost         4.80    0.208    0.25 (25%)
+XGBoost         4.80    0.208    0.25 (25%) ← Mejor
 LightGBM        4.95    0.202    0.24 (24%)
 Gradient Boost  5.10    0.196    0.23 (23%)
-Ridge           9.50    0.105    0.13 (13%)  ← peor, menor peso
+Ridge           9.50    0.105    0.13 (13%)  ← Peor
                         ------   ----
 Total                   0.903    1.00
 
-Predicciones individuales:
+PREDICCIÓN PARA MAÑANA:
 RF:    $152.30
-XGB:   $153.10
+XGB:   $153.10  ← Peso mayor
 LGBM:  $152.80
 GB:    $152.50
-Ridge: $151.00
+Ridge: $151.00  ← Peso menor
 
 Predicción_ensemble = (0.23×152.30) + (0.25×153.10) + (0.24×152.80) +
                       (0.23×152.50) + (0.13×151.00)
@@ -534,13 +662,26 @@ Predicción_ensemble = (0.23×152.30) + (0.25×153.10) + (0.24×152.80) +
 
 ### 2.7 Cálculo de Confianza
 
-**Fórmula**:
+**Método basado en varianza de predicciones**:
+
 ```
-Confianza = 1 - (Varianza_predicciones / Precio_promedio)
+Paso 1: Obtener predicciones de cada modelo
+preds = [pred_rf, pred_xgb, pred_lgbm, pred_gb, pred_ridge]
 
-Varianza_predicciones = Σ(pred_i - pred_mean)² / n
+Paso 2: Calcular varianza
+varianza = Σ(pred_i - pred_mean)² / n
 
-Límite: Confianza ∈ [0.3, 0.95]
+Paso 3: Calcular confianza
+confianza_raw = 1 - (varianza / pred_mean)
+
+Paso 4: Ajustar por performance del mejor modelo
+mejor_r2 = max(r2_rf, r2_xgb, r2_lgbm, r2_gb, r2_ridge)
+factor_ajuste = sqrt(mejor_r2)
+
+confianza = confianza_raw × factor_ajuste
+
+Paso 5: Limitar rango
+Confianza_final ∈ [0.3, 0.95]
 ```
 
 **Ejemplo**:
@@ -553,20 +694,16 @@ Varianza = [(152.30-152.34)² + (153.10-152.34)² + (152.80-152.34)² +
          = [0.0016 + 0.5776 + 0.2116 + 0.0256 + 1.7956] / 5
          = 2.612 / 5 = 0.522
 
-Confianza = 1 - (0.522 / 152.34) = 1 - 0.0034 = 0.9966
+Confianza_raw = 1 - (0.522 / 152.34) = 1 - 0.0034 = 0.9966
 
-Aplicar límite superior: min(0.9966, 0.95) = 0.95
+Mejor R² = 0.85 (XGBoost)
+factor_ajuste = sqrt(0.85) = 0.922
 
-Confianza_final = 95%
-```
+Confianza = 0.9966 × 0.922 = 0.919
 
-Si la varianza fuera más alta:
-```
-Predicciones muy dispersas: [145, 155, 148, 160, 142]
-Media = 150
-Varianza = 50.0
+Aplicar límite: min(0.919, 0.95) = 0.919
 
-Confianza = 1 - (50 / 150) = 1 - 0.333 = 0.667 = 67%
+Confianza_final = 91.9%
 ```
 
 ### 2.8 Métricas de Evaluación
@@ -610,6 +747,8 @@ Usando datos anteriores:
 MAE = (1 + 1 + 1 + 1 + 1) / 5 = $1.00
 ```
 
+**Ventaja sobre RMSE**: No penaliza tanto los errores grandes (no usa cuadrados).
+
 #### 2.8.3 MAPE (Mean Absolute Percentage Error)
 
 **Fórmula**:
@@ -627,6 +766,8 @@ MAPE = (100/5) × (1/150 + 1/152 + 1/148 + 1/155 + 1/153)
 Interpretación: El modelo tiene un error promedio del 0.66%
 ```
 
+**Ventaja**: Métrica en porcentaje, fácil de interpretar independiente del precio.
+
 #### 2.8.4 R² (Coeficiente de Determinación)
 
 **Fórmula**:
@@ -639,10 +780,55 @@ SS_tot = Σ(yᵢ - ȳ)²   (suma de cuadrados totales)
 ȳ = media de precios reales
 ```
 
+**Ejemplo**:
+```
+Precios reales: [150, 152, 148, 155, 153]
+Media (ȳ) = 151.6
+
+Predichos: [151, 153, 147, 154, 152]
+
+SS_res = (150-151)² + (152-153)² + (148-147)² + (155-154)² + (153-152)²
+       = 1 + 1 + 1 + 1 + 1 = 5
+
+SS_tot = (150-151.6)² + (152-151.6)² + (148-151.6)² + (155-151.6)² + (153-151.6)²
+       = 2.56 + 0.16 + 12.96 + 11.56 + 1.96 = 29.2
+
+R² = 1 - (5 / 29.2) = 1 - 0.171 = 0.829
+
+Interpretación: El modelo explica el 82.9% de la variabilidad de los precios
+```
+
 **Interpretación**:
 - R² = 1.0: Predicción perfecta
-- R² = 0.9: El modelo explica el 90% de la variabilidad
-- R² = 0.0: El modelo no es mejor que predecir la media
+- R² = 0.9: Excelente (90% de variabilidad explicada)
+- R² = 0.7-0.8: Bueno
+- R² = 0.5: Moderado
+- R² < 0.3: Modelo poco predictivo
+- R² < 0: Modelo peor que predecir la media
+
+#### 2.8.5 Direction Accuracy
+
+**Fórmula**:
+```
+Dirección_real = sign(Precio_t+1 - Precio_t)
+Dirección_predicha = sign(Predicción_t+1 - Precio_t)
+
+Accuracy = Σ(Dirección_real == Dirección_predicha) / n × 100%
+```
+
+**Ejemplo**:
+```
+Día  Real  Pred  Dir_Real  Dir_Pred  Correcto?
+1    150   151    ↑         ↑         ✓
+2    152   153    ↑         ↑         ✓
+3    148   147    ↓         ↓         ✓
+4    155   154    ↑         ↑         ✓
+5    153   152    ↓         ↓         ✓
+
+Direction Accuracy = 5/5 = 100%
+```
+
+**Importancia**: En trading, predecir la dirección correcta puede ser más valioso que predecir el precio exacto.
 
 ---
 
@@ -658,7 +844,9 @@ Parámetros:
 - newsCount = 10
 ```
 
-### 3.2 Métodos de Análisis
+### 3.2 Métodos de Análisis Implementados
+
+El sistema utiliza **4 métodos independientes** de análisis de sentimiento:
 
 #### 3.2.1 VADER (Valence Aware Dictionary and sEntiment Reasoner)
 
@@ -753,26 +941,50 @@ Sentimiento = argmax(P) = "positivo"
 Score = P(positivo) - P(negativo) = 0.75 - 0.10 = 0.65
 ```
 
+#### 3.2.4 Financial Lexicon (Léxico Financiero)
+
+**Concepto**: Diccionario especializado de términos financieros con valencias.
+
+**Método**:
+```
+Para cada palabra en la noticia:
+    Si palabra en lexicon_positivo:
+        score += valencia_positiva
+    Si palabra en lexicon_negativo:
+        score -= valencia_negativa
+
+score_final = score / total_palabras
+```
+
+**Ejemplos de términos**:
+```
+Positivos: "profit", "growth", "surge", "beat", "strong"
+Negativos: "loss", "decline", "miss", "weak", "concern"
+```
+
 ### 3.3 Ensemble de Sentimiento
 
-**Método de combinación**:
-```python
-# Normalizar todos los scores a [-1, +1]
-score_vader = vader_compound
-score_textblob = textblob_polarity
-score_finbert = finbert_score
+**IMPORTANTE**: Los pesos implementados son:
 
-# Promedio ponderado
+```python
 pesos = {
-    'vader': 0.20,      # Menos peso (general purpose)
-    'textblob': 0.25,   # Peso moderado
-    'finbert': 0.55     # Mayor peso (especializado en finanzas)
+    'finbert': 0.40,      # 40% - Transformer especializado
+    'vader': 0.25,        # 25% - Redes sociales
+    'lexicon': 0.20,      # 20% - Léxico financiero
+    'textblob': 0.15      # 15% - Análisis léxico general
 }
 
-score_final = (score_vader × 0.20) +
-              (score_textblob × 0.25) +
-              (score_finbert × 0.55)
+score_final = (score_finbert × 0.40) +
+              (score_vader × 0.25) +
+              (score_lexicon × 0.20) +
+              (score_textblob × 0.15)
 ```
+
+**Razón de los pesos**:
+- FinBERT tiene mayor peso porque está especializado en finanzas
+- VADER segundo porque maneja bien intensificadores
+- Lexicon tercero porque usa términos financieros específicos
+- TextBlob menor peso porque es más general
 
 **Ejemplo completo**:
 ```
@@ -782,19 +994,27 @@ Noticia 1: "Apple beats earnings expectations"
 - VADER: 0.72
 - TextBlob: 0.65
 - FinBERT: 0.85
-Score_1 = (0.72×0.20) + (0.65×0.25) + (0.85×0.55) = 0.144 + 0.163 + 0.468 = 0.775
+- Lexicon: 0.75
+
+Score_1 = (0.85×0.40) + (0.72×0.25) + (0.75×0.20) + (0.65×0.15)
+        = 0.340 + 0.180 + 0.150 + 0.098
+        = 0.768
 
 Noticia 2: "iPhone sales decline in China"
 - VADER: -0.45
 - TextBlob: -0.30
 - FinBERT: -0.60
-Score_2 = (-0.45×0.20) + (-0.30×0.25) + (-0.60×0.55) = -0.090 - 0.075 - 0.330 = -0.495
+- Lexicon: -0.50
+
+Score_2 = (-0.60×0.40) + (-0.45×0.25) + (-0.50×0.20) + (-0.30×0.15)
+        = -0.240 - 0.113 - 0.100 - 0.045
+        = -0.498
 
 ... (continuar con las 10 noticias)
 
-Scores: [0.775, -0.495, 0.320, 0.150, -0.200, 0.410, 0.550, -0.100, 0.280, 0.350]
+Scores: [0.768, -0.498, 0.320, 0.150, -0.200, 0.410, 0.550, -0.100, 0.280, 0.350]
 
-Score_promedio = Σ scores / 10 = 2.040 / 10 = 0.204
+Score_promedio = Σ scores / 10 = 2.030 / 10 = 0.203
 ```
 
 ### 3.4 Clasificación de Sentimiento
@@ -808,48 +1028,60 @@ else:
     sentimiento = "neutral"
 ```
 
+**Umbral de ±0.05**: Evita clasificar como positivo/negativo sentimientos muy débiles.
+
 ### 3.5 Cálculo de Confianza
 
-**Fórmula**:
-```
-Base_confianza = 0.5
+**Fórmula implementada**:
 
-# Ajuste por número de noticias
+```python
+# Base de confianza
+base = 0.5
+
+# Ajuste por número de noticias (máx +0.2)
 ajuste_cantidad = min(n_noticias / 10, 1.0) × 0.2
 
-# Ajuste por acuerdo entre métodos
-desviación_métodos = std([score_vader, score_textblob, score_finbert])
-ajuste_acuerdo = (1 - desviación_métodos) × 0.3
+# Ajuste por acuerdo entre métodos (máx +0.3)
+scores_métodos = [score_finbert, score_vader, score_lexicon, score_textblob]
+desviación = std(scores_métodos)
+acuerdo = 1 - min(desviación, 1.0)
+ajuste_acuerdo = acuerdo × 0.3
 
-Confianza = Base_confianza + ajuste_cantidad + ajuste_acuerdo
+confianza = base + ajuste_cantidad + ajuste_acuerdo
 
-Límites: Confianza ∈ [0.3, 0.9]
+# Limitar rango
+confianza_final ∈ [0.3, 0.9]
 ```
 
 **Ejemplo**:
 ```
 n_noticias = 10
-Scores por noticia (promedio de 3 métodos):
-VADER scores: [0.72, -0.45, 0.32, ...]
-TextBlob scores: [0.65, -0.30, 0.28, ...]
-FinBERT scores: [0.85, -0.60, 0.38, ...]
+Scores para una noticia:
+- FinBERT: 0.85
+- VADER: 0.72
+- Lexicon: 0.75
+- TextBlob: 0.65
 
-Para la noticia 1:
-Desviación = std([0.72, 0.65, 0.85]) = 0.10 (bajo → alto acuerdo)
+Desviación = std([0.85, 0.72, 0.75, 0.65]) = 0.08
 
-Confianza_1:
 Base = 0.5
 Ajuste_cantidad = min(10/10, 1.0) × 0.2 = 0.2
-Ajuste_acuerdo = (1 - 0.10) × 0.3 = 0.27
-Confianza = 0.5 + 0.2 + 0.27 = 0.97 → limitado a 0.9
+Acuerdo = 1 - 0.08 = 0.92
+Ajuste_acuerdo = 0.92 × 0.3 = 0.276
+
+Confianza = 0.5 + 0.2 + 0.276 = 0.976
+
+Aplicar límite: min(0.976, 0.9) = 0.9
 
 Confianza_final = 90%
 ```
 
 Si solo hay 3 noticias:
 ```
-Ajuste_cantidad = min(3/10, 1.0) × 0.2 = 0.3 × 0.2 = 0.06
-Confianza = 0.5 + 0.06 + 0.27 = 0.83 = 83%
+Ajuste_cantidad = min(3/10, 1.0) × 0.2 = 0.06
+Confianza = 0.5 + 0.06 + 0.276 = 0.836
+
+Confianza_final = 83.6%
 ```
 
 ---
@@ -858,13 +1090,34 @@ Confianza = 0.5 + 0.06 + 0.27 = 0.83 = 83%
 
 ### 4.1 Modelo de Factores Multi-Señal
 
-#### 4.1.1 Construcción del Vector de Factores
+#### 4.1.1 Los 15 Factores del Modelo
 
-**15 factores normalizados a escala [-1, +1]**:
+**Tabla de factores y pesos**:
 
-**A. Factores Técnicos (40% peso total)**:
+| Factor | Peso | Categoría | Descripción |
+|--------|------|-----------|-------------|
+| **trend_signal** | 0.12 | Técnico | Tendencia alcista/bajista/neutral |
+| **momentum_signal** | 0.10 | Técnico | RSI (sobreventa/sobrecompra) |
+| **volatility_signal** | 0.08 | Técnico | Nivel de volatilidad |
+| **volume_signal** | 0.06 | Técnico | Volumen vs promedio |
+| **support_resistance** | 0.04 | Técnico | Niveles de soporte/resistencia* |
+| **model_prediction** | 0.15 | Predicción | Predicción del modelo IA |
+| **prediction_confidence** | 0.10 | Predicción | Confianza del modelo |
+| **ensemble_agreement** | 0.10 | Predicción | Acuerdo entre modelos |
+| **sentiment_score** | 0.08 | Sentimiento | Sentimiento positivo/negativo |
+| **sentiment_trend** | 0.04 | Sentimiento | Tendencia del sentimiento |
+| **news_impact** | 0.03 | Sentimiento | Impacto de noticias |
+| **risk_adjusted_return** | 0.05 | Riesgo | Retorno ajustado por riesgo |
+| **market_regime** | 0.03 | Riesgo | Régimen de mercado actual |
+| **correlation_factor** | 0.02 | Riesgo | Correlación con mercado* |
 
-1. **Trend Signal** (peso: 0.12):
+**Total peso**: 1.00 (100%)
+
+*Nota: support_resistance y correlation_factor están implementados como placeholders (valor 0.0).
+
+#### 4.1.2 Cálculo de Cada Factor
+
+**1. Trend Signal** (peso: 0.12):
 ```
 trend = {
     "alcista": +0.8,
@@ -873,7 +1126,7 @@ trend = {
 }
 ```
 
-2. **Momentum Signal** (peso: 0.10):
+**2. Momentum Signal** (peso: 0.10):
 ```
 if RSI < 30:
     momentum = +0.7    # Sobreventa = oportunidad de compra
@@ -889,7 +1142,7 @@ RSI = 35 → momentum = (50-35)/50 × 0.5 = 0.15
 RSI = 65 → momentum = (50-65)/50 × 0.5 = -0.15
 ```
 
-3. **Volatility Signal** (peso: 0.08):
+**3. Volatility Signal** (peso: 0.08):
 ```
 volatility_signal = -min(ATR / 5, 1.0) + 0.5
 
@@ -903,8 +1156,10 @@ ATR = 4.0 → signal = -min(4/5, 1) + 0.5 = -0.8 + 0.5 = -0.3
 ATR = 6.0 → signal = -min(6/5, 1) + 0.5 = -1.0 + 0.5 = -0.5
 ```
 
-4. **Volume Signal** (peso: 0.06):
+**4. Volume Signal** (peso: 0.06):
 ```
+volumen_ratio = Volumen_actual / Promedio_volumen_20d
+
 if volumen_ratio > 1.5:
     signal = 0.5 × sign(variación_precio)  # Alto volumen confirma dirección
 elif volumen_ratio < 0.5:
@@ -913,15 +1168,13 @@ else:
     signal = 0.0
 ```
 
-5. **Support/Resistance** (peso: 0.04):
+**5. Support/Resistance** (peso: 0.04):
 ```
-# Placeholder (requiere análisis de niveles históricos)
+# Placeholder - no implementado
 signal = 0.0
 ```
 
-**B. Factores de Predicción (35% peso total)**:
-
-6. **Model Prediction** (peso: 0.15):
+**6. Model Prediction** (peso: 0.15):
 ```
 signal = tanh(variación_pct / 5)
 
@@ -935,7 +1188,7 @@ variación = +2.5% → signal = tanh(0.5) = 0.46
 variación = -5% → signal = tanh(-1) = -0.76
 ```
 
-7. **Prediction Confidence** (peso: 0.10):
+**7. Prediction Confidence** (peso: 0.10):
 ```
 signal = (confianza × 2) - 1
 
@@ -949,14 +1202,12 @@ confianza = 0.5 → signal = (0.5×2) - 1 = 0.0
 confianza = 0.3 → signal = (0.3×2) - 1 = -0.4
 ```
 
-8. **Ensemble Agreement** (peso: 0.10):
+**8. Ensemble Agreement** (peso: 0.10):
 ```
 signal = confianza × 0.8
 ```
 
-**C. Factores de Sentimiento (15% peso total)**:
-
-9. **Sentiment Score** (peso: 0.08):
+**9. Sentiment Score** (peso: 0.08):
 ```
 sent_map = {
     "positivo": +0.7,
@@ -973,19 +1224,17 @@ Sentimiento = "positivo", confianza = 0.6
 signal = 0.7 × 0.6 = 0.42
 ```
 
-10. **Sentiment Trend** (peso: 0.04):
+**10. Sentiment Trend** (peso: 0.04):
 ```
 signal = sentiment_score_numérico × 0.5
 ```
 
-11. **News Impact** (peso: 0.03):
+**11. News Impact** (peso: 0.03):
 ```
 signal = sentiment_factor × 0.5
 ```
 
-**D. Factores de Riesgo (10% peso total)**:
-
-12. **Risk-Adjusted Return** (peso: 0.05):
+**12. Risk-Adjusted Return** (peso: 0.05):
 ```
 risk_adj = variación_pct / (volatilidad + 0.5)
 signal = tanh(risk_adj / 2)
@@ -998,7 +1247,7 @@ risk_adj = 3 / (2 + 0.5) = 1.2
 signal = tanh(1.2/2) = tanh(0.6) = 0.54
 ```
 
-13. **Market Regime** (peso: 0.03):
+**13. Market Regime** (peso: 0.03):
 ```
 regime_map = {
     "tendencia_alcista": +0.5,
@@ -1010,13 +1259,13 @@ regime_map = {
 }
 ```
 
-14. **Correlation Factor** (peso: 0.02):
+**14. Correlation Factor** (peso: 0.02):
 ```
-# Placeholder (requiere correlación con índices)
+# Placeholder - no implementado
 signal = 0.0
 ```
 
-#### 4.1.2 Cálculo del Composite Score
+#### 4.1.3 Cálculo del Composite Score
 
 **Fórmula**:
 ```
@@ -1067,7 +1316,7 @@ composite_score = 0.174 / 1.00 = 0.174
 
 ### 4.2 Evaluación de Riesgo
 
-#### 4.2.1 Componentes del Risk Assessment
+#### 4.2.1 Los 6 Componentes del Risk Assessment
 
 **1. Volatility Score**:
 ```
@@ -1114,7 +1363,7 @@ else:
 
 **5. Liquidity Risk**:
 ```
-# Simplificado (en producción usar volumen/float)
+# Simplificado - valor fijo
 liquidity_risk = 0.1
 ```
 
@@ -1189,21 +1438,21 @@ Límites: prob ∈ [0.2, 0.8]
 
 **Desglose del cálculo**:
 
-1. **Probabilidad base (50% ± 30%)**:
+**Componente 1: Probabilidad base (50% ± 30%)**:
 ```
 Si composite_score = +0.5 → base = 0.5 + (0.5×0.3) = 0.65 (65%)
 Si composite_score = 0.0 → base = 0.5 + (0.0×0.3) = 0.50 (50%)
 Si composite_score = -0.5 → base = 0.5 + (-0.5×0.3) = 0.35 (35%)
 ```
 
-2. **Ajuste por confianza (±10%)**:
+**Componente 2: Ajuste por confianza (±10%)**:
 ```
 Si confianza = 0.8 → adj = 0.8 × 0.1 = +0.08 (+8%)
 Si confianza = 0.5 → adj = 0.5 × 0.1 = +0.05 (+5%)
 Si confianza = 0.3 → adj = 0.3 × 0.1 = +0.03 (+3%)
 ```
 
-3. **Penalización por riesgo (±10%)**:
+**Componente 3: Penalización por riesgo (±10%)**:
 ```
 Si risk = 0.3 → adj = -0.3 × 0.1 = -0.03 (-3%)
 Si risk = 0.5 → adj = -0.5 × 0.1 = -0.05 (-5%)
@@ -1384,13 +1633,11 @@ Confianza final = 41.5% ≈ 42%
 ```
 if |variación_pct| ≥ umbral_crítico:
     nivel = "CRÍTICO"
-    tipo = "precio" si variación normal
-           "volatilidad" si ATR muy alto
-           "volumen" si volumen anormal
+    tipo = "precio"
 
 elif |variación_pct| ≥ umbral_warning:
     nivel = "WARNING"
-    tipo = similar al anterior
+    tipo = "precio"
 
 else:
     sin_alerta = True
@@ -1403,29 +1650,161 @@ else:
 umbral_warning = 3.0%
 umbral_crítico = 7.0%
 
-Configurables por usuario en tiempo real
+Configurables por usuario en tiempo real via dashboard
 ```
 
-### 5.3 Detección de Condiciones Especiales
+### 5.3 Sistema Avanzado de Detección de Anomalías
 
-**1. Alta Volatilidad**:
+El sistema implementa **5 detectores especializados** para identificar anomalías:
+
+#### 5.3.1 Z-Score (Desviación Estándar)
+
+**Concepto**: Mide cuántas desviaciones estándar se aleja un valor de la media.
+
+**Fórmula**:
 ```
-if ATR > percentil_90(ATR_histórico):
-    añadir_factor("Alta volatilidad detectada")
+z = (x - μ) / σ
+
+donde:
+x = valor actual
+μ = media histórica
+σ = desviación estándar
 ```
 
-**2. Volumen Anormal**:
+**Detección de anomalía**:
 ```
-if volumen_ratio > 3.0:
-    añadir_factor("Volumen excepcionalmente alto")
-elif volumen_ratio < 0.3:
-    añadir_factor("Volumen inusualmente bajo")
+if |z| > 3:
+    anomalía = "extrema"
+elif |z| > 2:
+    anomalía = "moderada"
 ```
 
-**3. Divergencias**:
+**Ejemplo**:
 ```
-if (precio ↑ y sentimiento negativo) or (precio ↓ y sentimiento positivo):
-    añadir_factor("Divergencia precio-sentimiento")
+Retornos últimos 30 días: media = 0.2%, std = 1.5%
+Retorno hoy = 5.0%
+
+z = (5.0 - 0.2) / 1.5 = 4.8 / 1.5 = 3.2
+
+|3.2| > 3 → ANOMALÍA EXTREMA
+```
+
+#### 5.3.2 MAD (Median Absolute Deviation)
+
+**Concepto**: Medida robusta de dispersión basada en la mediana.
+
+**Fórmula**:
+```
+MAD = median(|xᵢ - median(x)|)
+
+MAD_score = |x - median(x)| / (MAD × 1.4826)
+
+# 1.4826 es constante para equivalencia con std en distribución normal
+```
+
+**Ventaja**: Más robusto a outliers que Z-Score.
+
+**Ejemplo**:
+```
+Retornos: [0.1, 0.2, -0.1, 0.3, 0.2, -0.2, 0.1, 5.0]
+Mediana = 0.15
+
+Desviaciones absolutas: [0.05, 0.05, 0.25, 0.15, 0.05, 0.35, 0.05, 4.85]
+MAD = median([...]) = 0.10
+
+MAD_score = |5.0 - 0.15| / (0.10 × 1.4826) = 4.85 / 0.148 = 32.7
+
+MAD_score > 3 → ANOMALÍA
+```
+
+#### 5.3.3 CUSUM (Cumulative Sum)
+
+**Concepto**: Detecta cambios sistemáticos en la media de una serie temporal.
+
+**Fórmulas**:
+```
+# CUSUM positivo (detecta desviaciones al alza)
+CUSUM_pos[t] = max(0, CUSUM_pos[t-1] + (x[t] - μ - k))
+
+# CUSUM negativo (detecta desviaciones a la baja)
+CUSUM_neg[t] = max(0, CUSUM_neg[t-1] + (μ - k - x[t]))
+
+donde:
+μ = objetivo (media histórica)
+k = tolerancia (típicamente 0.5 × σ)
+h = umbral de alerta (típicamente 4 × σ)
+```
+
+**Detección**:
+```
+if CUSUM_pos > h or CUSUM_neg > h:
+    anomalía_detectada = True
+```
+
+**Ventaja**: Detecta cambios de tendencia persistentes, no solo picos aislados.
+
+#### 5.3.4 Isolation Forest
+
+**Concepto**: Algoritmo de machine learning para detectar anomalías multivariadas.
+
+**Método**:
+```
+1. Construir árboles de aislamiento aleatorios
+2. Para cada punto:
+   - Calcular profundidad promedio de aislamiento
+   - Puntos anómalos requieren menos particiones para aislar
+3. Score de anomalía: basado en profundidad de aislamiento
+
+Anomaly_score ∈ [-1, +1]
+- Score > 0.5: Anomalía
+- Score < 0: Normal
+```
+
+**Ventaja**: Detecta anomalías en múltiples dimensiones simultáneamente.
+
+**Features utilizadas**:
+- Precio de cierre
+- Volumen
+- Retorno diario
+- Volatilidad
+- RSI
+- ATR
+
+#### 5.3.5 Volume Anomaly Detector
+
+**Concepto**: Detecta patrones anormales de volumen.
+
+**Método combinado**:
+```
+# 1. Z-Score del volumen
+z_volume = (volume - μ_volume) / σ_volume
+
+# 2. Ratio vs promedio móvil
+volume_ratio = volume / SMA(volume, 20)
+
+# 3. Detectar anomalía
+if z_volume > 3 or volume_ratio > 3:
+    anomalía_volumen = True
+
+    # Clasificar dirección
+    if precio_cierre > precio_apertura:
+        tipo = "volumen_comprador"
+    else:
+        tipo = "volumen_vendedor"
+```
+
+**Ejemplo**:
+```
+Volumen promedio: 10M acciones, std: 2M
+Volumen hoy: 25M acciones
+
+z_volume = (25 - 10) / 2 = 7.5
+ratio = 25 / 10 = 2.5
+
+7.5 > 3 → ANOMALÍA DE VOLUMEN detectada
+
+Si precio ↑ → "volumen_comprador" (presión alcista fuerte)
+Si precio ↓ → "volumen_vendedor" (presión bajista fuerte)
 ```
 
 ### 5.4 Generación de Mensaje de Alerta
@@ -1441,6 +1820,11 @@ elif nivel == "WARNING":
                {factores_adicionales}"
 ```
 
+**Factores adicionales detectados**:
+- Alta volatilidad (ATR > percentil 90)
+- Volumen excepcional (ratio > 3.0)
+- Múltiples detectores de anomalías activados
+
 **Ejemplo**:
 ```
 ticker = "TSLA"
@@ -1448,16 +1832,19 @@ variación = -8.5%
 umbral_crítico = 7.0%
 ATR = 5.2% (muy alto)
 volumen_ratio = 3.5 (muy alto)
+Z-Score = 4.2 (anomalía extrema)
 
 Detección:
-|- variación| = 8.5% > 7.0% → CRÍTICO
+|variación| = 8.5% > 7.0% → CRÍTICO
 ATR > percentil_90 → factor: "Alta volatilidad"
 volumen_ratio > 3.0 → factor: "Volumen excepcional"
+Z-Score > 3 → factor: "Anomalía estadística detectada"
 
 Mensaje generado:
 "⚠️ ALERTA CRÍTICA: TSLA muestra variación de -8.50% (bajista fuerte).
 Factores adicionales: Alta volatilidad detectada (ATR: 5.2%),
-Volumen excepcional (3.5x promedio)"
+Volumen excepcional (3.5x promedio), Anomalía estadística confirmada por
+3 detectores (Z-Score, MAD, Isolation Forest)"
 ```
 
 ### 5.5 Persistencia de Alertas
@@ -1472,8 +1859,9 @@ INSERT INTO alertas (
     variacion_pct,
     precio_actual,
     leida,
-    fecha_creacion
-) VALUES (?, ?, ?, ?, ?, ?, ?, 0, NOW())
+    fecha_creacion,
+    anomaly_scores  -- JSON con scores de detectores
+) VALUES (?, ?, ?, ?, ?, ?, ?, 0, NOW(), ?)
 ```
 
 ---
@@ -1488,7 +1876,7 @@ Usuario solicita análisis de TICKER
 ┌────────────────────────────────────────┐
 │ 1. MarketAgent                         │
 │   - Descargar datos (6 meses)         │
-│   - Calcular 14 indicadores técnicos  │
+│   - Calcular 35+ indicadores técnicos │
 │   - Detectar régimen de mercado       │
 │   - Generar señal unificada           │
 │   Output: market_data                 │
@@ -1496,10 +1884,11 @@ Usuario solicita análisis de TICKER
          ↓
 ┌────────────────────────────────────────┐
 │ 2. ModelAgent                          │
-│   - Construir features (21 variables) │
+│   - Construir features (30+ variables)│
 │   - Ejecutar 5 modelos ML             │
-│   - Ensemble ponderado                │
-│   - Calcular métricas (RMSE, MAE)     │
+│   - Ensemble ponderado por RMSE       │
+│   - Calcular métricas (RMSE, MAE,     │
+│     MAPE, R², Direction Accuracy)     │
 │   Output: prediction                  │
 └────────────────────────────────────────┘
          ↓
@@ -1507,8 +1896,12 @@ Usuario solicita análisis de TICKER
 │ 3. SentimentAgent                      │
 │   - Obtener 10 noticias recientes     │
 │   - Análisis con VADER + TextBlob +   │
-│     FinBERT                           │
-│   - Promedio ponderado (FinBERT 55%) │
+│     FinBERT + Lexicon                 │
+│   - Promedio ponderado:               │
+│     * FinBERT 40%                     │
+│     * VADER 25%                       │
+│     * Lexicon 20%                     │
+│     * TextBlob 15%                    │
 │   - Clasificar sentimiento            │
 │   Output: sentiment                   │
 └────────────────────────────────────────┘
@@ -1518,8 +1911,8 @@ Usuario solicita análisis de TICKER
 │   - Construir vector de 15 factores   │
 │   - Calcular composite_score          │
 │   - Evaluar riesgo (6 componentes)    │
-│   - Calcular prob. ganancia           │
-│   - Position sizing (Kelly)           │
+│   - Calcular prob. ganancia (3 comp.) │
+│   - Position sizing (Kelly 25%)       │
 │   - Determinar tipo de recomendación  │
 │   Output: recommendation              │
 └────────────────────────────────────────┘
@@ -1527,7 +1920,7 @@ Usuario solicita análisis de TICKER
 ┌────────────────────────────────────────┐
 │ 5. AlertAgent                          │
 │   - Comparar vs umbrales              │
-│   - Detectar condiciones especiales   │
+│   - Ejecutar 5 detectores de anomalías│
 │   - Generar mensaje si aplica         │
 │   - Persistir en BD                   │
 │   Output: alert (opcional)            │
@@ -1556,14 +1949,17 @@ Datos descargados: 126 días
 Precio actual: $397.21
 Precio anterior: $396.50
 
-Indicadores calculados:
+Indicadores calculados (35+):
 - RSI: 52.3
-- MACD: 2.15
-- Signal: 1.89
+- MACD: 2.15, Signal: 1.89
 - ATR: 3.28
 - Bollinger: (385.2, 398.5, 411.8)
 - Volumen ratio: 1.15
 - ADX: 22.1
+- Stochastic: 58.2
+- MFI: 57.8
+- OBV: 245M
+- ... y 25+ más
 
 Régimen detectado: "neutral" (ADX < 25)
 Señal técnica: "neutral" (score = 0.05)
@@ -1571,19 +1967,20 @@ Señal técnica: "neutral" (score = 0.05)
 
 **PASO 2 - ModelAgent**:
 ```
-Features construidos: 21 variables × 125 samples
+Features construidos: 30+ variables × 125 samples
 
-Modelos entrenados:
-- Random Forest: RMSE = $13.50
-- XGBoost: RMSE = $12.80
-- LightGBM: RMSE = $13.10
-- Gradient Boost: RMSE = $13.25
-- Ridge: RMSE = $18.90
+Validación cruzada (3 folds):
+Modelo           RMSE_avg
+Random Forest    $13.50
+XGBoost          $12.80  ← Mejor
+LightGBM         $13.10
+Gradient Boost   $13.25
+Ridge            $18.90
 
 Pesos calculados:
-- RF: 22%
 - XGB: 24% (mejor modelo)
 - LGBM: 23%
+- RF: 22%
 - GB: 23%
 - Ridge: 8%
 
@@ -1598,24 +1995,41 @@ Predicción ensemble: $408.45
 Variación: +2.83%
 Confianza: 54%
 RMSE: $13.10
+MAE: $10.52
+MAPE: 2.65%
+R²: 0.78
+Direction Accuracy: 62%
 ```
 
 **PASO 3 - SentimentAgent**:
 ```
 Noticias obtenidas: 10
 
-Análisis por noticia:
-1. "Tesla expands production capacity" → +0.65
-2. "Concerns about competition" → -0.30
-3. "Strong Q4 deliveries expected" → +0.72
+Análisis por noticia (ejemplo):
+1. "Tesla expands production capacity"
+   - VADER: +0.68
+   - TextBlob: +0.55
+   - FinBERT: +0.72
+   - Lexicon: +0.65
+   - Score: +0.68
+
+2. "Concerns about competition"
+   - VADER: -0.35
+   - TextBlob: -0.25
+   - FinBERT: -0.42
+   - Lexicon: -0.30
+   - Score: -0.36
 ...
 
-Scores promedio:
+Scores promedio por método:
 - VADER: 0.18
 - TextBlob: 0.12
 - FinBERT: 0.22
+- Lexicon: 0.19
 
-Score final: (0.18×0.20) + (0.12×0.25) + (0.22×0.55) = 0.187
+Score final: (0.22×0.40) + (0.18×0.25) + (0.19×0.20) + (0.12×0.15)
+           = 0.088 + 0.045 + 0.038 + 0.018 = 0.189
+
 Sentimiento: POSITIVO
 Confianza: 39%
 ```
@@ -1626,24 +2040,37 @@ Factores construidos (15):
 - Top factor: model_prediction (+0.074)
 - 2do: ensemble_agreement (+0.043)
 - 3ro: risk_adjusted_return (+0.030)
+- 4to: sentiment_score (+0.022)
 
 Composite score: 0.174
 
 Risk assessment:
 - Volatility score: 0.66
 - VaR 95%: 4.67%
+- Max drawdown: 8.25%
+- Correlation risk: 0.15
+- Liquidity risk: 0.10
+- Event risk: 0.61
 - Overall risk: 0.473 (MODERADO)
 
-Probabilidad ganancia: 56%
+Probabilidad ganancia:
+- Base: 0.552 (composite score)
+- + Confianza: 0.054
+- - Riesgo: -0.047
+- = 0.559 (56%)
 
 Position sizing:
+- Kelly óptimo: 4.7%
+- Kelly conservador (25%): 1.2%
+- Ajuste por riesgo: ×0.527
 - Sugerida: 1.0% del portfolio
 - Máxima: 1.5%
 - Stop loss: 4.95%
 - Take profit: 4.25%
+- Risk/Reward: 0.86:1
 
-Tipo: COMPRA DÉBIL (score = 0.174 ∈ [0.10, 0.30])
-Confianza: 42%
+Tipo: COMPRA DÉBIL
+Confianza recomendación: 42%
 ```
 
 **PASO 5 - AlertAgent**:
@@ -1652,7 +2079,14 @@ Variación: 2.83%
 Umbral warning: 3.0%
 Umbral crítico: 7.0%
 
-2.83% < 3.0% → Sin alerta
+2.83% < 3.0% → Sin alerta tradicional
+
+Detectores de anomalías:
+1. Z-Score: 1.8 (normal)
+2. MAD: 1.5 (normal)
+3. CUSUM: Dentro de límites
+4. Isolation Forest: 0.15 (normal)
+5. Volume Anomaly: No detectada
 
 Output: { tiene_alerta: false }
 ```
@@ -1674,8 +2108,14 @@ Output: { tiene_alerta: false }
       "atr": 3.28,
       "bb_upper": 411.8,
       "bb_lower": 385.2,
+      "bb_pct": 0.52,
       "adx": 22.1,
-      "mfi": 58.2
+      "mfi": 57.8,
+      "stochastic": 58.2
+    },
+    "signal_analysis": {
+      "market_regime": "neutral",
+      "score_tecnico": 0.05
     }
   },
   "prediccion": {
@@ -1685,28 +2125,76 @@ Output: { tiene_alerta: false }
     "metricas": {
       "rmse": 13.10,
       "mae": 10.52,
-      "mape": 2.65
+      "mape": 2.65,
+      "r2": 0.78,
+      "direction_accuracy": 0.62
+    },
+    "modelos_detalle": {
+      "predicciones": {
+        "random_forest": 408.20,
+        "xgboost": 409.10,
+        "lightgbm": 408.50,
+        "gradient_boosting": 408.30,
+        "ridge": 405.80
+      },
+      "pesos": {
+        "random_forest": 0.22,
+        "xgboost": 0.24,
+        "lightgbm": 0.23,
+        "gradient_boosting": 0.23,
+        "ridge": 0.08
+      },
+      "mejor_modelo": "xgboost"
     }
   },
   "sentimiento": {
     "sentimiento": "positivo",
-    "score": 0.187,
-    "confianza": 0.39
+    "score": 0.189,
+    "confianza": 0.39,
+    "metodos": {
+      "vader": 0.18,
+      "textblob": 0.12,
+      "finbert": 0.22,
+      "lexicon": 0.19
+    },
+    "noticias_analizadas": 10
   },
   "recomendacion": {
     "tipo": "compra",
     "accion_sugerida": "Considerar comprar TSLA",
     "confianza": 0.42,
+    "composite_score": 0.174,
     "probability_profit": 0.56,
     "risk_level": "moderado",
+    "risk_assessment": {
+      "overall_risk": 0.473,
+      "volatility_score": 0.66,
+      "var_95": 4.67,
+      "max_drawdown": 8.25
+    },
     "position_sizing": {
       "suggested_allocation": 1.0,
+      "max_allocation": 1.5,
       "stop_loss": 4.95,
-      "take_profit": 4.25
-    }
+      "take_profit": 4.25,
+      "risk_reward_ratio": 0.86
+    },
+    "top_factores": [
+      {"name": "model_prediction", "direction": "bullish", "contribution": 0.074},
+      {"name": "ensemble_agreement", "direction": "bullish", "contribution": 0.043},
+      {"name": "risk_adjusted_return", "direction": "bullish", "contribution": 0.030},
+      {"name": "sentiment_score", "direction": "bullish", "contribution": 0.022}
+    ]
   },
   "alerta": {
-    "tiene_alerta": false
+    "tiene_alerta": false,
+    "anomaly_detection": {
+      "z_score": 1.8,
+      "mad_score": 1.5,
+      "cusum_alert": false,
+      "isolation_forest_score": 0.15,
+      "volume_anomaly": false
+    }
   }
 }
 ```
@@ -1715,23 +2203,33 @@ Output: { tiene_alerta: false }
 
 ## GLOSARIO DE TÉRMINOS
 
-**ATR (Average True Range)**: Indicador de volatilidad que mide el rango promedio de movimiento del precio.
+**ADX**: Average Directional Index - Indicador que mide la fuerza de la tendencia.
 
-**Composite Score**: Puntuación combinada de múltiples factores de análisis, normalizada entre -1 y +1.
+**ATR**: Average True Range - Indicador de volatilidad que mide el rango promedio de movimiento.
+
+**Composite Score**: Puntuación combinada de 15 factores de análisis, normalizada entre -1 y +1.
+
+**CUSUM**: Cumulative Sum - Técnica estadística para detectar cambios de tendencia.
 
 **Ensemble**: Combinación de múltiples modelos de machine learning para mejorar precisión.
 
-**Kelly Criterion**: Fórmula matemática para calcular el tamaño óptimo de una apuesta/inversión.
+**Kelly Criterion**: Fórmula matemática para calcular el tamaño óptimo de una inversión.
 
-**MACD**: Indicador de momentum basado en medias móviles exponenciales.
+**MACD**: Moving Average Convergence Divergence - Indicador de momentum basado en medias móviles.
 
-**Risk-Adjusted Return**: Retorno esperado dividido por la volatilidad (Sharpe ratio simplificado).
+**MAD**: Median Absolute Deviation - Medida robusta de dispersión estadística.
 
-**RSI**: Indicador que mide velocidad y magnitud de cambios de precio (0-100).
+**MFI**: Money Flow Index - RSI ponderado por volumen.
 
-**Sentiment Score**: Puntuación numérica del sentimiento de mercado basado en análisis de noticias.
+**OBV**: On-Balance Volume - Indicador de presión compradora/vendedora basado en volumen.
 
-**VaR (Value at Risk)**: Pérdida máxima esperada con un nivel de confianza dado (95%).
+**Risk-Adjusted Return**: Retorno esperado dividido por la volatilidad.
+
+**RSI**: Relative Strength Index - Indicador de momentum (0-100).
+
+**VaR**: Value at Risk - Pérdida máxima esperada con un nivel de confianza dado.
+
+**Z-Score**: Número de desviaciones estándar que un valor se aleja de la media.
 
 ---
 
@@ -1744,11 +2242,13 @@ Output: { tiene_alerta: false }
 5. Hutto, C. & Gilbert, E. (2014). "VADER: A Parsimonious Rule-based Model for Sentiment Analysis". *ICWSM*.
 6. Araci, D. (2019). "FinBERT: Financial Sentiment Analysis with Pre-trained Language Models". arXiv.
 7. Chen, T. & Guestrin, C. (2016). "XGBoost: A Scalable Tree Boosting System". *KDD*.
+8. Liu, F. T., Ting, K. M., & Zhou, Z. H. (2008). "Isolation Forest". *ICDM*.
+9. Page, E. S. (1954). "Continuous Inspection Schemes". *Biometrika*.
 
 ---
 
 **Fin del Anexo Técnico**
 
-*Documento generado para: Sistema Multiagente de Seguimiento Financiero*
-*Versión: 1.0*
+*Documento actualizado para reflejar la implementación real del sistema*
+*Versión: 2.0*
 *Fecha: Febrero 2026*
