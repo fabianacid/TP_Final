@@ -971,6 +971,43 @@ class RecommendationAgent:
         )
         nivel_riesgo_simple = f"Riesgo {nivel_simple}: {riesgo_explicacion}"
 
+        # Agregar explicación de QUÉ HACER según el tipo de recomendación
+        que_hacer_explicaciones = {
+            "compra_fuerte": f"""
+📋 ¿QUÉ HACER AHORA?
+  • ✅ Si YA TIENES acciones de {ticker} → MANTENERLAS y considerar comprar más
+  • ✅ Si NO TIENES acciones de {ticker} → Considerar comprar (buen momento)
+  • 💰 Momento favorable para iniciar o aumentar posición
+""",
+            "compra": f"""
+📋 ¿QUÉ HACER AHORA?
+  • ✅ Si YA TIENES acciones de {ticker} → CONSERVARLAS
+  • ✅ Si NO TIENES acciones de {ticker} → Considerar comprar si tienes confianza
+  • 💡 Podría ser buen momento para entrar con cautela
+""",
+            "mantener": f"""
+📋 ¿QUÉ HACER AHORA?
+  • ✅ Si YA TIENES acciones de {ticker} → CONSERVARLAS (no vender)
+  • ✅ Si NO TIENES acciones de {ticker} → NO comprar ahora, ESPERAR
+  • ⏸️ Esperar señales más claras antes de actuar
+""",
+            "venta": f"""
+📋 ¿QUÉ HACER AHORA?
+  • ⚠️ Si YA TIENES acciones de {ticker} → Considerar VENDER o reducir posición
+  • ✅ Si NO TIENES acciones de {ticker} → NO comprar
+  • 🚫 No es buen momento para iniciar posiciones
+""",
+            "venta_fuerte": f"""
+📋 ¿QUÉ HACER AHORA?
+  • 🚨 Si YA TIENES acciones de {ticker} → VENDER o reducir significativamente
+  • ✅ Si NO TIENES acciones de {ticker} → DEFINITIVAMENTE NO comprar
+  • ⛔ Momento desfavorable, proteger capital
+"""
+        }
+
+        que_hacer = que_hacer_explicaciones.get(tipo, que_hacer_explicaciones["mantener"])
+        explicacion += f"\n{que_hacer}"
+
         # Explicar POR QUÉ se llegó a esta recomendación
         factores_a_favor = []
         factores_en_contra = []

@@ -191,13 +191,23 @@ async def predict_ticker(
         # ========================================
         # PASO 4: Agente de Recomendación
         # ========================================
+        # Pasar TODOS los datos del análisis técnico al agente de recomendación
         recommendation = recommendation_agent.generar_recomendacion(
             ticker=ticker,
             senal_mercado=market_data.senal,
             variacion_pct=variacion_pct,
             sentimiento=sentiment.sentimiento,
             confianza_sentimiento=sentiment.confianza,
-            ultimo_precio=market_data.ultimo_precio
+            ultimo_precio=market_data.ultimo_precio,
+            # Pasar datos técnicos reales del MarketAgent
+            volatilidad=market_data.indicators.atr if market_data.indicators.atr > 0 else 2.0,
+            market_regime=market_data.signal_analysis.market_regime.value if hasattr(market_data.signal_analysis.market_regime, 'value') else str(market_data.signal_analysis.market_regime),
+            rsi=market_data.indicators.rsi,
+            macd_signal=market_data.indicators.macd_signal,
+            # Calcular volume_ratio basado en MFI o usar valor por defecto
+            volume_ratio=market_data.indicators.mfi / 50.0 if market_data.indicators.mfi > 0 else 1.0,
+            prediction_confidence=prediction.confianza if prediction else 0.5,
+            sentiment_score=sentiment.score if hasattr(sentiment, 'score') else 0.0
         )
         logger.info(f"[{ticker}] RecommendationAgent: {recommendation.tipo}")
 
