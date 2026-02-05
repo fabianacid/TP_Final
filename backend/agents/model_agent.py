@@ -564,6 +564,7 @@ class ModelAgent:
                 mse = mean_squared_error(y_val, y_pred)
                 mae = mean_absolute_error(y_val, y_pred)
                 rmse = np.sqrt(mse)
+                r2 = r2_score(y_val, y_pred)
 
                 # MAPE
                 mask = y_val != 0
@@ -580,7 +581,7 @@ class ModelAgent:
                     total_predictions += len(actual_direction)
 
                 metrics_list.append({
-                    'mse': mse, 'rmse': rmse, 'mae': mae, 'mape': mape
+                    'mse': mse, 'rmse': rmse, 'mae': mae, 'mape': mape, 'r2': r2
                 })
 
             except Exception as e:
@@ -610,6 +611,7 @@ class ModelAgent:
             rmse=np.mean([m['rmse'] for m in metrics_list]),
             mae=np.mean([m['mae'] for m in metrics_list]),
             mape=np.mean([m['mape'] for m in metrics_list]),
+            r2=np.mean([m['r2'] for m in metrics_list]),
             direction_accuracy=direction_correct / total_predictions if total_predictions > 0 else 0.5
         )
 

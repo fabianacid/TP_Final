@@ -574,7 +574,7 @@ def render_prediction_card(prediccion: Dict, precio_actual: float = 0):
         st.markdown("---")
         st.markdown("**Métricas de precisión:**")
         metricas = prediccion.get('metricas', {})
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("RMSE", f"${metricas.get('rmse', 0):.2f}", help="Error cuadrático medio")
         with col2:
@@ -582,6 +582,9 @@ def render_prediction_card(prediccion: Dict, precio_actual: float = 0):
             st.metric("MAPE", f"{mape:.2f}%", help="Error porcentual absoluto medio")
         with col3:
             st.metric("MAE", f"${metricas.get('mae', 0):.2f}", help="Error absoluto medio")
+        with col4:
+            r2 = metricas.get('r2', 0)
+            st.metric("R²", f"{r2:.4f}", help="Coeficiente de determinación (1.0 = predicción perfecta)")
 
 
 def render_sentiment_card(sentimiento: Dict):
