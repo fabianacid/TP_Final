@@ -1,0 +1,693 @@
+"""
+Dashboard Streamlit - Sistema Multiagente de Alertas Financieras
+
+Interfaz profesional para análisis de activos financieros.
+"""
+import streamlit as st
+import requests
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from datetime import datetime
+from typing import Optional, Dict, Any
+
+# Configuración de la página
+st.set_page_config(
+    page_title="Sistema de Alertas Financieras",
+    page_icon="",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Estilos CSS personalizados
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.2rem;
+        font-weight: 600;
+        color: #1a1a2e;
+        margin-bottom: 0.5rem;
+    }
+    .section-header {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #16213e;
+        border-bottom: 2px solid #e8e8e8;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+    .card {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 15px;
+    }
+    .metric-label {
+        font-size: 0.85rem;
+        color: #666;
+        margin-bottom: 4px;
+    }
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+    .positive { color: #28a745; }
+    .negative { color: #dc3545; }
+    .neutral { color: #6c757d; }
+    .action-buy {
+        background-color: #d4edda;
+        border: 2px solid #28a745;
+        color: #155724;
+    }
+    .action-sell {
+        background-color: #f8d7da;
+        border: 2px solid #dc3545;
+        color: #721c24;
+    }
+    .action-hold {
+        background-color: #fff3cd;
+        border: 2px solid #ffc107;
+        color: #856404;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# URL del backend
+API_URL = "http://localhost:8000"
+
+
+# ============================================
+# Funciones de autenticación
+# ============================================
+
+def login(username: str, password: str) -> Optional[str]:
+    """Realiza login y retorna token JWT."""
+    try:
+        response = requests.post(
+            f"{API_URL}/auth/login",
+            data={"username": username, "password": password}
+        )
+        if response.status_code == 200:
+            return response.json()["access_token"]
+        return None
+    except Exception as e:
+        st.error(f"Error de conexión: {str(e)}")
+        return None
+
+
+def register(username: str, email: str, password: str) -> bool:
+    """Registra un nuevo usuario."""
+    try:
+        response = requests.post(
+            f"{API_URL}/auth/register",
+            json={"username": username, "email": email, "password": password}
+        )
+        return response.status_code == 201
+    except Exception:
+        return False
+
+
+def get_headers() -> Dict[str, str]:
+    """Retorna headers con token de autenticación."""
+    if "token" in st.session_state:
+        return {"Authorization": f"Bearer {st.session_state.token}"}
+    return {}
+
+
+# ============================================
+# Funciones de API
+# ============================================
+
+def get_prediction(ticker: str) -> Optional[Dict[str, Any]]:
+    """Obtiene análisis completo para un ticker."""
+    try:
+        # Obtener umbrales personalizados del session_state
+        umbral_warning = st.session_state.get("umbral_warning", 3.0)
+        umbral_critical = st.session_state.get("umbral_critical", 7.0)
+
+        response = requests.get(
+            f"{API_URL}/predict/{ticker}",
+            headers=get_headers(),
+            params={
+                "umbral_warning": umbral_warning,
+                "umbral_critical": umbral_critical
+            }
+        )
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except Exception as e:
+        st.error(f"Error obteniendo datos: {str(e)}")
+        return None
+
+
+def get_alerts() -> list:
+    """Obtiene lista de alertas del usuario."""
+    try:
+        response = requests.get(f"{API_URL}/alerts", headers=get_headers())
+        if response.status_code == 200:
+            return response.json().get("alertas", [])
+        return []
+    except Exception:
+        return []
+
+
+# ============================================
+# Componentes de UI
+# ============================================
+
+def render_login_form():
+    """Renderiza el formulario de login."""
+    st.subheader("Iniciar Sesión")
+
+    with st.form("login_form"):
+        username = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        submitted = st.form_submit_button("Ingresar", use_container_width=True)
+
+        if submitted:
+            if username and password:
+                token = login(username, password)
+                if token:
+                    st.session_state.token = token
+                    st.session_state.username = username
+                    st.success("Bienvenido")
+                    st.rerun()
+                else:
+                    st.error("Usuario o contraseña incorrectos")
+            else:
+                st.warning("Complete todos los campos")
+
+
+def render_register_form():
+    """Renderiza el formulario de registro."""
+    st.subheader("Crear Cuenta")
+
+    with st.form("register_form"):
+        username = st.text_input("Usuario")
+        email = st.text_input("Email")
+        password = st.text_input("Contraseña", type="password")
+        password2 = st.text_input("Confirmar Contraseña", type="password")
+        submitted = st.form_submit_button("Registrarse", use_container_width=True)
+
+        if submitted:
+            if not all([username, email, password, password2]):
+                st.warning("Complete todos los campos")
+            elif password != password2:
+                st.error("Las contraseñas no coinciden")
+            elif len(password) < 6:
+                st.error("La contraseña debe tener al menos 6 caracteres")
+            else:
+                if register(username, email, password):
+                    st.success("Cuenta creada. Ahora puede iniciar sesión")
+                else:
+                    st.error("Error al crear cuenta. El usuario puede ya existir.")
+
+
+def render_auth_page():
+    """Renderiza la página de autenticación."""
+    st.markdown("<h1 class='main-header'>Sistema de Alertas Financieras</h1>", unsafe_allow_html=True)
+    st.markdown("Plataforma de análisis predictivo para inversores")
+    st.markdown("---")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        render_login_form()
+    with col2:
+        render_register_form()
+
+
+def render_sidebar():
+    """Renderiza el sidebar con opciones."""
+    with st.sidebar:
+        st.markdown("### Panel de Control")
+
+        if "username" in st.session_state:
+            st.write(f"Usuario: **{st.session_state.username}**")
+            st.markdown("---")
+
+        # Selector de ticker
+        ticker = st.text_input(
+            "Símbolo del Activo",
+            value=st.session_state.get("ticker", "AAPL"),
+            help="Ej: AAPL, GOOGL, MSFT, AMZN"
+        ).upper()
+
+        st.session_state.ticker = ticker
+
+        if st.button("Analizar", type="primary", use_container_width=True):
+            st.session_state.run_analysis = True
+
+        st.markdown("---")
+        st.markdown("**Accesos Rápidos**")
+
+        popular = ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA", "META"]
+        cols = st.columns(2)
+        for i, t in enumerate(popular):
+            if cols[i % 2].button(t, use_container_width=True, key=f"btn_{t}"):
+                st.session_state.ticker = t
+                st.session_state.run_analysis = True
+                st.rerun()
+
+        st.markdown("---")
+
+        # Configuración de alertas
+        st.markdown("**Configuración de Alertas**")
+
+        umbral_warning = st.slider(
+            "Umbral Advertencia (%)",
+            min_value=0.5,
+            max_value=10.0,
+            value=st.session_state.get("umbral_warning", 3.0),
+            step=0.5,
+            help="Genera alerta de advertencia si la variación supera este porcentaje"
+        )
+        st.session_state.umbral_warning = umbral_warning
+
+        umbral_critical = st.slider(
+            "Umbral Crítico (%)",
+            min_value=1.0,
+            max_value=15.0,
+            value=st.session_state.get("umbral_critical", 7.0),
+            step=0.5,
+            help="Genera alerta crítica si la variación supera este porcentaje"
+        )
+        st.session_state.umbral_critical = umbral_critical
+
+        st.caption(f"Advertencia: >{umbral_warning}% | Crítico: >{umbral_critical}%")
+
+        st.markdown("---")
+        if st.button("Cerrar Sesión", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+
+
+def render_market_metrics(mercado: Dict):
+    """Renderiza métricas de mercado."""
+    st.markdown("<p class='section-header'>Datos de Mercado</p>", unsafe_allow_html=True)
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        variacion = mercado['variacion_diaria']
+        delta_color = "normal" if variacion >= 0 else "inverse"
+        st.metric("Precio Actual", f"${mercado['ultimo_precio']:.2f}", f"{variacion:.2f}%", delta_color=delta_color)
+
+    with col2:
+        st.metric("Precio Anterior", f"${mercado['precio_anterior']:.2f}")
+
+    with col3:
+        st.metric("Media Móvil (20)", f"${mercado['media_movil_20']:.2f}")
+
+    with col4:
+        senal = mercado['senal']
+        color_class = "positive" if senal == "alcista" else "negative" if senal == "bajista" else "neutral"
+        st.markdown(f"""
+            <div class='metric-label'>Señal Técnica</div>
+            <div class='metric-value {color_class}'>{senal.upper()}</div>
+        """, unsafe_allow_html=True)
+
+
+def render_prediction_card(prediccion: Dict, precio_actual: float = 0):
+    """Renderiza tarjeta de predicción."""
+    st.markdown("<p class='section-header'>Predicción del Modelo</p>", unsafe_allow_html=True)
+
+    variacion = prediccion['variacion_pct']
+    precio_predicho = prediccion['precio_predicho']
+
+    # Determinar dirección
+    if variacion > 2:
+        direccion = "ALZA SIGNIFICATIVA"
+        color_class = "positive"
+    elif variacion > 0:
+        direccion = "Alza moderada"
+        color_class = "positive"
+    elif variacion < -2:
+        direccion = "BAJA SIGNIFICATIVA"
+        color_class = "negative"
+    elif variacion < 0:
+        direccion = "Baja moderada"
+        color_class = "negative"
+    else:
+        direccion = "Estable"
+        color_class = "neutral"
+
+    st.markdown(f"""
+        <div class='card'>
+            <div class='metric-label'>Tendencia Esperada</div>
+            <div class='metric-value {color_class}' style='margin-bottom:15px'>{direccion}</div>
+            <div style='display:flex;gap:40px;flex-wrap:wrap'>
+                <div>
+                    <div class='metric-label'>Precio Actual</div>
+                    <div style='font-size:1.3rem;font-weight:600'>${precio_actual:.2f}</div>
+                </div>
+                <div>
+                    <div class='metric-label'>Precio Proyectado</div>
+                    <div class='metric-value {color_class}'>${precio_predicho:.2f}</div>
+                </div>
+                <div>
+                    <div class='metric-label'>Variación Esperada</div>
+                    <div class='metric-value {color_class}'>{variacion:+.2f}%</div>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Detalles de modelos
+    with st.expander("Ver detalles de los modelos de IA"):
+        modelos_detalle = prediccion.get('modelos_detalle', {})
+        predicciones = modelos_detalle.get('predicciones', {})
+        pesos = modelos_detalle.get('pesos', {})
+
+        if predicciones:
+            nombres_modelos = {
+                "ridge": "Ridge Regression",
+                "xgboost": "XGBoost",
+                "lightgbm": "LightGBM",
+                "gradient_boosting": "Gradient Boosting",
+                "random_forest": "Random Forest",
+                "linear_regression": "Regresión Lineal"
+            }
+
+            st.markdown("**Predicción por modelo:**")
+
+            # Crear DataFrame para mostrar
+            data = []
+            for modelo, pred in predicciones.items():
+                peso = pesos.get(modelo, 0) * 100
+                nombre = nombres_modelos.get(modelo, modelo)
+                data.append({"Modelo": nombre, "Predicción": f"${pred:.2f}", "Peso": f"{peso:.1f}%"})
+
+            df = pd.DataFrame(data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+
+            mejor = prediccion.get('parametros', {}).get('mejor_modelo', 'N/A')
+            st.info(f"Modelo con mejor rendimiento: **{nombres_modelos.get(mejor, mejor)}**")
+
+        # Métricas de precisión
+        st.markdown("---")
+        st.markdown("**Métricas de precisión:**")
+        metricas = prediccion.get('metricas', {})
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("RMSE", f"${metricas.get('rmse', 0):.2f}", help="Error cuadrático medio")
+        with col2:
+            mape = metricas.get('mape', 0)
+            st.metric("MAPE", f"{mape:.2f}%", help="Error porcentual absoluto medio")
+        with col3:
+            st.metric("MAE", f"${metricas.get('mae', 0):.2f}", help="Error absoluto medio")
+
+
+def render_sentiment_card(sentimiento: Dict):
+    """Renderiza tarjeta de sentimiento."""
+    st.markdown("<p class='section-header'>Análisis de Sentimiento</p>", unsafe_allow_html=True)
+
+    sent = sentimiento['sentimiento']
+    color_class = "positive" if sent == "positivo" else "negative" if sent == "negativo" else "neutral"
+
+    explicacion = sentimiento.get('explicacion_simple', f'El sentimiento del mercado es {sent}')
+    # Limpiar emojis de la explicación
+    explicacion = explicacion.replace('📈', '').replace('📉', '').replace('➡️', '').replace('😊', '').replace('😟', '').replace('😐', '').strip()
+
+    que_significa = sentimiento.get('que_significa', '')
+    que_significa = que_significa.replace('⚠️', '').replace('💡', '').strip()
+
+    st.markdown(f"""
+        <div class='card'>
+            <div class='metric-label'>Sentimiento del Mercado</div>
+            <div class='metric-value {color_class}' style='margin-bottom:15px'>{sent.upper()}</div>
+            <p style='color:#444;margin-bottom:10px'>{explicacion}</p>
+            <p style='color:#666;font-size:0.9rem'><strong>Interpretación:</strong> {que_significa}</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Detalles técnicos
+    with st.expander("Ver metodología de análisis"):
+        como_se_calcula = sentimiento.get('como_se_calcula', '')
+        # Limpiar emojis
+        como_se_calcula = como_se_calcula.replace('📊', '').strip()
+
+        if como_se_calcula:
+            st.markdown(como_se_calcula)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Score", f"{sentimiento['score']:.4f}")
+        with col2:
+            st.metric("Confianza", f"{sentimiento['confianza']:.1%}")
+
+
+def render_recommendation_card(recomendacion: Dict):
+    """Renderiza tarjeta de recomendación."""
+    st.markdown("<p class='section-header'>Recomendación</p>", unsafe_allow_html=True)
+
+    tipo = recomendacion['tipo']
+
+    # Determinar clase CSS
+    if tipo == "compra":
+        action_class = "action-buy"
+        action_text = "COMPRA"
+    elif tipo == "venta":
+        action_class = "action-sell"
+        action_text = "VENTA"
+    else:
+        action_class = "action-hold"
+        action_text = "MANTENER"
+
+    accion_sugerida = recomendacion.get('accion_sugerida', action_text)
+    # Limpiar emojis
+    accion_sugerida = accion_sugerida.replace('🟢', '').replace('🔴', '').replace('🟡', '').strip()
+
+    explicacion = recomendacion.get('explicacion_simple', '')
+    nivel_riesgo = recomendacion.get('nivel_riesgo_simple', '')
+    # Limpiar emojis
+    nivel_riesgo = nivel_riesgo.replace('🛡️', '').strip()
+
+    st.markdown(f"""
+        <div class='card {action_class}' style='border-radius:12px;padding:25px'>
+            <div style='font-size:1.8rem;font-weight:700;margin-bottom:15px'>{accion_sugerida}</div>
+            <p style='font-size:1rem;line-height:1.6;margin-bottom:15px'>{explicacion}</p>
+            <div style='background:rgba(255,255,255,0.5);padding:12px;border-radius:8px'>
+                <strong>{nivel_riesgo}</strong>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Detalles del análisis
+    with st.expander("Ver análisis detallado"):
+        porque = recomendacion.get('porque_esta_recomendacion', '')
+        # Limpiar emojis
+        porque = porque.replace('📊', '').replace('✅', '').replace('❌', '').replace('🎯', '')
+        porque = porque.replace('📈', '').replace('📉', '').replace('➡️', '')
+        porque = porque.replace('🤖', '').replace('😊', '').replace('😟', '').replace('😐', '')
+        porque = porque.replace('🛡️', '').replace('⚠️', '').replace('1️⃣', '1.').replace('2️⃣', '2.').replace('3️⃣', '3.')
+
+        if porque:
+            st.markdown(porque)
+
+        st.markdown("---")
+        st.markdown("**Factores considerados:**")
+        factores = recomendacion.get('factores', {})
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Señal Técnica", factores.get('senal_mercado', 'N/A').upper())
+        with col2:
+            st.metric("Variación Esperada", f"{factores.get('variacion_pct', 0):.2f}%")
+        with col3:
+            prob = factores.get('prob_profit', 0) * 100
+            st.metric("Prob. Ganancia", f"{prob:.0f}%")
+
+
+def render_alert_card(alerta: Dict):
+    """Renderiza tarjeta de alerta."""
+    if alerta['tiene_alerta']:
+        nivel = alerta['nivel']
+        if nivel == "critical":
+            st.error(f"**ALERTA CRÍTICA** - {alerta['mensaje']}")
+        elif nivel == "warning":
+            st.warning(f"**ADVERTENCIA** - {alerta['mensaje']}")
+        else:
+            st.info(f"**INFORMACIÓN** - {alerta['mensaje']}")
+    else:
+        st.success("Sin alertas activas para este activo")
+
+
+def render_price_chart(ticker: str, prediction_data: Dict):
+    """Renderiza gráfico de precios."""
+    mercado = prediction_data['mercado']
+    prediccion = prediction_data['prediccion']
+
+    import numpy as np
+
+    dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+    base_price = mercado['ultimo_precio']
+
+    np.random.seed(42)
+    prices = [base_price * (1 + np.random.uniform(-0.02, 0.02)) for _ in range(29)]
+    prices.append(base_price)
+
+    fig = go.Figure()
+
+    # Línea de precios
+    fig.add_trace(go.Scatter(
+        x=dates, y=prices,
+        mode='lines',
+        name='Precio',
+        line=dict(color='#2563eb', width=2)
+    ))
+
+    # Media móvil
+    ma_values = pd.Series(prices).rolling(window=20, min_periods=1).mean()
+    fig.add_trace(go.Scatter(
+        x=dates, y=ma_values,
+        mode='lines',
+        name='MA(20)',
+        line=dict(color='#f59e0b', width=1, dash='dash')
+    ))
+
+    # Punto de predicción
+    future_date = dates[-1] + pd.Timedelta(days=1)
+    fig.add_trace(go.Scatter(
+        x=[future_date],
+        y=[prediccion['precio_predicho']],
+        mode='markers',
+        name='Predicción',
+        marker=dict(color='#10b981', size=12, symbol='diamond')
+    ))
+
+    fig.update_layout(
+        title=dict(text=f"Evolución de Precio - {ticker}", font=dict(size=16)),
+        xaxis_title="Fecha",
+        yaxis_title="Precio (USD)",
+        hovermode='x unified',
+        showlegend=True,
+        height=350,
+        margin=dict(l=0, r=0, t=40, b=0),
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
+    )
+    fig.update_xaxes(gridcolor='#e5e5e5')
+    fig.update_yaxes(gridcolor='#e5e5e5')
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_alerts_history():
+    """Renderiza historial de alertas."""
+    st.markdown("<p class='section-header'>Historial de Alertas</p>", unsafe_allow_html=True)
+
+    alerts = get_alerts()
+
+    if not alerts:
+        st.info("No hay alertas registradas")
+        return
+
+    df = pd.DataFrame(alerts)
+
+    if 'fecha_creacion' in df.columns:
+        df['fecha_creacion'] = pd.to_datetime(df['fecha_creacion']).dt.strftime('%Y-%m-%d %H:%M')
+
+    st.dataframe(
+        df[['ticker', 'tipo', 'mensaje', 'variacion_pct', 'leida', 'fecha_creacion']],
+        use_container_width=True,
+        hide_index=True
+    )
+
+    if len(df) > 0:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            tipo_counts = df['tipo'].value_counts()
+            fig = px.pie(
+                values=tipo_counts.values,
+                names=tipo_counts.index,
+                title="Distribución por Tipo",
+                color_discrete_sequence=['#ef4444', '#f59e0b', '#3b82f6']
+            )
+            fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+            st.plotly_chart(fig, use_container_width=True)
+
+        with col2:
+            ticker_counts = df['ticker'].value_counts().head(5)
+            fig = px.bar(
+                x=ticker_counts.index,
+                y=ticker_counts.values,
+                title="Alertas por Activo",
+                color=ticker_counts.values,
+                color_continuous_scale='Blues'
+            )
+            fig.update_layout(showlegend=False, margin=dict(l=0, r=0, t=40, b=0))
+            st.plotly_chart(fig, use_container_width=True)
+
+
+def render_main_dashboard():
+    """Renderiza el dashboard principal."""
+    render_sidebar()
+
+    st.markdown("<h1 class='main-header'>Sistema de Alertas Financieras</h1>", unsafe_allow_html=True)
+    st.markdown("---")
+
+    tab1, tab2 = st.tabs(["Análisis de Activos", "Historial de Alertas"])
+
+    with tab1:
+        if st.session_state.get("run_analysis", False):
+            ticker = st.session_state.get("ticker", "AAPL")
+
+            with st.spinner(f"Analizando {ticker}..."):
+                data = get_prediction(ticker)
+
+            st.session_state.run_analysis = False
+
+            if data:
+                st.session_state.last_analysis = data
+            else:
+                st.error(f"No se pudieron obtener datos para {ticker}")
+
+        if "last_analysis" in st.session_state:
+            data = st.session_state.last_analysis
+
+            st.markdown(f"### {data['ticker']}")
+            st.caption(f"Última actualización: {data['fecha_analisis'][:19].replace('T', ' ')}")
+
+            render_alert_card(data['alerta'])
+
+            st.markdown("---")
+            render_price_chart(data['ticker'], data)
+
+            st.markdown("---")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                render_market_metrics(data['mercado'])
+                st.markdown("")
+                render_prediction_card(data['prediccion'], data['mercado']['ultimo_precio'])
+
+            with col2:
+                render_sentiment_card(data['sentimiento'])
+                st.markdown("")
+                render_recommendation_card(data['recomendacion'])
+
+        else:
+            st.info("Seleccione un activo en el panel lateral y presione 'Analizar' para comenzar")
+
+    with tab2:
+        if "token" in st.session_state:
+            render_alerts_history()
+        else:
+            st.warning("Inicie sesión para ver el historial de alertas")
+
+
+def main():
+    """Función principal de la aplicación."""
+    if "token" not in st.session_state:
+        render_auth_page()
+    else:
+        render_main_dashboard()
+
+
+if __name__ == "__main__":
+    main()
