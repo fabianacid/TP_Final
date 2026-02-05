@@ -42,6 +42,8 @@ env/
 *~
 
 # Configuración local
+.local/
+.config/
 
 # Logs
 *.log
