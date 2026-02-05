@@ -58,9 +58,41 @@ class Usuario(Base):
     # Relaciones
     alertas = relationship("Alerta", back_populates="usuario")
     metricas = relationship("MetricaModelo", back_populates="usuario")
+    reset_tokens = relationship("PasswordResetToken", back_populates="usuario")
 
     def __repr__(self):
         return f"<Usuario(id={self.id}, username='{self.username}', rol='{self.rol}')>"
+
+
+class PasswordResetToken(Base):
+    """
+    Modelo de Token de Reseteo de Contraseña.
+
+    Almacena tokens únicos y seguros para permitir que los usuarios
+    reseteen sus contraseñas de forma segura mediante email.
+
+    Atributos:
+        id: Identificador único del token
+        usuario_id: Usuario asociado al token
+        token: Token único y seguro (hash)
+        expiracion: Fecha y hora de expiración del token
+        usado: Si el token ya fue utilizado
+        fecha_creacion: Fecha de creación del token
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    token = Column(String(255), unique=True, index=True, nullable=False)
+    expiracion = Column(DateTime, nullable=False)
+    usado = Column(Integer, default=0)  # 0 = no usado, 1 = usado
+    fecha_creacion = Column(DateTime, default=datetime.utcnow)
+
+    # Relación con usuario
+    usuario = relationship("Usuario", back_populates="reset_tokens")
+
+    def __repr__(self):
+        return f"<PasswordResetToken(id={self.id}, usuario_id={self.usuario_id}, usado={self.usado})>"
 
 
 class Alerta(Base):

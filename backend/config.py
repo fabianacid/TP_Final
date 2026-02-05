@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "clave_secreta_desarrollo_cambiar_en_produccion"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    PASSWORD_RESET_TOKEN_EXPIRE_HOURS: int = 1  # Expiración de tokens de reseteo
 
     # Base de datos
     DATABASE_URL: str = "sqlite:///./financial_tracker.db"

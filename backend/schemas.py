@@ -48,6 +48,29 @@ class TokenData(BaseModel):
     user_id: Optional[int] = None
 
 
+class ForgotPasswordRequest(BaseModel):
+    """Schema para solicitud de recuperación de contraseña."""
+    email: EmailStr = Field(..., description="Email del usuario registrado")
+
+
+class ResetPasswordRequest(BaseModel):
+    """Schema para reseteo de contraseña con token."""
+    token: str = Field(..., min_length=32, description="Token de reseteo recibido por email")
+    new_password: str = Field(..., min_length=6, description="Nueva contraseña")
+
+
+class ChangePasswordRequest(BaseModel):
+    """Schema para cambio de contraseña autenticado."""
+    current_password: str = Field(..., description="Contraseña actual")
+    new_password: str = Field(..., min_length=6, description="Nueva contraseña")
+
+
+class MessageResponse(BaseModel):
+    """Schema para respuestas simples con mensaje."""
+    message: str
+    detail: Optional[str] = None
+
+
 # ============================================================
 # Schemas de Datos de Mercado
 # ============================================================

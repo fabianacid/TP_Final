@@ -5,25 +5,35 @@ Este módulo implementa los endpoints de autenticación:
 - POST /auth/register: Registro de nuevos usuarios
 - POST /auth/login: Inicio de sesión (obtener token JWT)
 - GET /auth/me: Obtener información del usuario actual
+- POST /auth/forgot-password: Solicitar recuperación de contraseña
+- POST /auth/reset-password: Resetear contraseña con token
+- PUT /auth/change-password: Cambiar contraseña (autenticado)
 
 Cumple con las recomendaciones de OWASP para autenticación segura.
 """
 import logging
-from datetime import timedelta
+import secrets
+from datetime import timedelta, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from ..database import get_db, Usuario
-from ..schemas import UserCreate, UserResponse, Token
+from ..database import get_db, Usuario, PasswordResetToken
+from ..schemas import (
+    UserCreate, UserResponse, Token,
+    ForgotPasswordRequest, ResetPasswordRequest, ChangePasswordRequest,
+    MessageResponse
+)
 from ..auth import (
     get_password_hash,
     authenticate_user,
     create_access_token,
-    get_current_active_user
+    get_current_active_user,
+    verify_password
 )
 from ..config import settings
+from ..email_service import EmailService
 
 # Configuración de logging
 logger = logging.getLogger(__name__)
@@ -245,3 +255,254 @@ async def refresh_token(
         access_token=access_token,
         token_type="bearer"
     )
+
+
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Solicitar recuperación de contraseña",
+    description="Envía un email con link para resetear contraseña."
+)
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Solicita recuperación de contraseña mediante email.
+
+    Proceso:
+    1. Verifica que el email esté registrado
+    2. Genera token único y seguro
+    3. Guarda token en BD con expiración
+    4. Envía email con link de reseteo
+
+    Args:
+        request: Email del usuario
+        db: Sesión de base de datos
+
+    Returns:
+        MessageResponse: Confirmación (siempre éxito por seguridad)
+    """
+    # Buscar usuario por email
+    user = db.query(Usuario).filter(Usuario.email == request.email).first()
+
+    # IMPORTANTE: Por seguridad, siempre devolver éxito aunque el email no exista
+    # Esto evita que atacantes enumeren emails registrados
+    if not user:
+        logger.warning(f"Solicitud de reseteo para email no registrado: {request.email}")
+        return MessageResponse(
+            message="Si el email está registrado, recibirás instrucciones para resetear tu contraseña.",
+            detail="Por seguridad, no indicamos si el email existe o no."
+        )
+
+    try:
+        # Generar token seguro (64 caracteres hexadecimales)
+        reset_token = secrets.token_urlsafe(48)
+
+        # Calcular fecha de expiración
+        expiration = datetime.utcnow() + timedelta(hours=settings.PASSWORD_RESET_TOKEN_EXPIRE_HOURS)
+
+        # Invalidar tokens anteriores del usuario
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.usuario_id == user.id,
+            PasswordResetToken.usado == 0
+        ).update({"usado": 1})
+
+        # Crear nuevo token
+        new_token = PasswordResetToken(
+            usuario_id=user.id,
+            token=reset_token,
+            expiracion=expiration
+        )
+
+        db.add(new_token)
+        db.commit()
+
+        # Enviar email
+        email_sent = EmailService.send_password_reset_email(
+            to_email=request.email,
+            username=user.username,
+            reset_token=reset_token
+        )
+
+        if email_sent:
+            logger.info(f"Token de reseteo creado y email enviado para: {user.username}")
+        else:
+            logger.warning(f"Token de reseteo creado pero email no enviado para: {user.username}")
+
+        return MessageResponse(
+            message="Si el email está registrado, recibirás instrucciones para resetear tu contraseña.",
+            detail="Revisa tu bandeja de entrada y spam. El link expira en 1 hora."
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en forgot_password: {str(e)}")
+        # Por seguridad, no revelar el error específico
+        return MessageResponse(
+            message="Si el email está registrado, recibirás instrucciones para resetear tu contraseña."
+        )
+
+
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Resetear contraseña con token",
+    description="Resetea la contraseña usando el token recibido por email."
+)
+async def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Resetea la contraseña usando token de recuperación.
+
+    Proceso:
+    1. Valida token (existencia, expiración, uso previo)
+    2. Actualiza contraseña del usuario
+    3. Marca token como usado
+    4. Envía email de confirmación
+
+    Args:
+        request: Token y nueva contraseña
+        db: Sesión de base de datos
+
+    Returns:
+        MessageResponse: Confirmación de cambio
+
+    Raises:
+        HTTPException 400: Si el token es inválido o expirado
+    """
+    # Buscar token
+    token_record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == request.token
+    ).first()
+
+    # Validar token existe
+    if not token_record:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token inválido o expirado"
+        )
+
+    # Validar token no usado
+    if token_record.usado == 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este token ya fue utilizado"
+        )
+
+    # Validar token no expirado
+    if datetime.utcnow() > token_record.expiracion:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Token expirado. Solicita uno nuevo."
+        )
+
+    try:
+        # Obtener usuario
+        user = db.query(Usuario).filter(Usuario.id == token_record.usuario_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado"
+            )
+
+        # Actualizar contraseña
+        user.password_hash = get_password_hash(request.new_password)
+
+        # Marcar token como usado
+        token_record.usado = 1
+
+        db.commit()
+
+        logger.info(f"Contraseña reseteada exitosamente para: {user.username}")
+
+        # Enviar email de confirmación
+        EmailService.send_password_changed_confirmation(
+            to_email=user.email,
+            username=user.username
+        )
+
+        return MessageResponse(
+            message="Contraseña actualizada exitosamente",
+            detail="Ya puedes iniciar sesión con tu nueva contraseña"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en reset_password: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al actualizar contraseña"
+        )
+
+
+@router.put(
+    "/change-password",
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Cambiar contraseña (autenticado)",
+    description="Permite al usuario cambiar su contraseña estando autenticado."
+)
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: Usuario = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Cambia la contraseña del usuario autenticado.
+
+    Requiere que el usuario proporcione su contraseña actual
+    por seguridad.
+
+    Args:
+        request: Contraseña actual y nueva
+        current_user: Usuario autenticado
+        db: Sesión de base de datos
+
+    Returns:
+        MessageResponse: Confirmación de cambio
+
+    Raises:
+        HTTPException 401: Si la contraseña actual es incorrecta
+    """
+    # Verificar contraseña actual
+    if not verify_password(request.current_password, current_user.password_hash):
+        logger.warning(f"Intento de cambio de contraseña fallido para: {current_user.username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña actual incorrecta"
+        )
+
+    try:
+        # Actualizar contraseña
+        current_user.password_hash = get_password_hash(request.new_password)
+        db.commit()
+
+        logger.info(f"Contraseña cambiada exitosamente para: {current_user.username}")
+
+        # Enviar email de confirmación
+        if current_user.email:
+            EmailService.send_password_changed_confirmation(
+                to_email=current_user.email,
+                username=current_user.username
+            )
+
+        return MessageResponse(
+            message="Contraseña actualizada exitosamente",
+            detail="Tu contraseña ha sido cambiada de forma segura"
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error en change_password: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error al actualizar contraseña"
+        )
