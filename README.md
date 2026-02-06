@@ -9,7 +9,7 @@ Prototipo funcional de un sistema inteligente basado en agentes para el seguimie
 
 ---
 
-## 📑 Tabla de Contenidos
+## Tabla de Contenidos
 
 - [Descripción](#descripción)
 - [Arquitectura](#arquitectura)
@@ -54,21 +54,21 @@ Este proyecto implementa un sistema multiagente que integra:
 graph TB
     User[👤 Usuario] --> Dashboard[🖥️ Dashboard Streamlit<br/>:8501]
     Dashboard --> API[⚡ API REST FastAPI<br/>:8000]
-    API --> Auth[🔐 Auth JWT]
-    API --> Router1[📡 Routers]
+    API --> Auth[ Auth JWT]
+    API --> Router1[ Routers]
 
-    Router1 --> MA[🔍 MarketAgent<br/>Análisis Técnico]
-    Router1 --> MOA[🤖 ModelAgent<br/>Predicción ML]
-    Router1 --> SA[📰 SentimentAgent<br/>Análisis NLP]
-    Router1 --> RA[💡 RecommendationAgent<br/>Decisión Multi-Factor]
-    Router1 --> AA[🚨 AlertAgent<br/>Alertas]
+    Router1 --> MA[ MarketAgent<br/>Análisis Técnico]
+    Router1 --> MOA[ ModelAgent<br/>Predicción ML]
+    Router1 --> SA[ SentimentAgent<br/>Análisis NLP]
+    Router1 --> RA[ RecommendationAgent<br/>Decisión Multi-Factor]
+    Router1 --> AA[ AlertAgent<br/>Alertas]
 
     MA --> YF[📊 Yahoo Finance]
     SA --> YF
     MOA --> Cache[(⚡ Cache)]
     SA --> Cache
 
-    AA --> DB[(💾 SQLite DB<br/>Usuarios/Alertas)]
+    AA --> DB[( SQLite DB<br/>Usuarios/Alertas)]
     Auth --> DB
 
     style MA fill:#e3f2fd
@@ -132,7 +132,7 @@ graph TB
 
 ### Agentes Especializados
 
-1. **MarketAgent** 🔍
+1. **MarketAgent** 
    - Descarga datos históricos de Yahoo Finance
    - Calcula 35+ indicadores técnicos avanzados:
      - **Tendencia**: SMA, EMA, MACD, ADX, Ichimoku, Parabolic SAR
@@ -145,7 +145,7 @@ graph TB
    - Identifica régimen de mercado (trending/ranging)
    - Detecta soportes y resistencias
 
-2. **ModelAgent** 🤖
+2. **ModelAgent** 
    - Ensemble de 5+ modelos de Machine Learning:
      - Linear/Ridge/Lasso/ElasticNet Regression
      - Random Forest Regressor
@@ -158,7 +158,7 @@ graph TB
    - Predicción con intervalos de confianza (95%)
    - Métricas completas: RMSE, MAPE, MAE, R², Direction Accuracy
 
-3. **SentimentAgent** 📰
+3. **SentimentAgent** 
    - Ensemble de modelos NLP:
      - **FinBERT** (40% peso) - Transformer especializado en finanzas
      - **VADER** (25% peso) - Análisis léxico
@@ -169,7 +169,7 @@ graph TB
    - Extracción de temas clave (earnings, M&A, regulatory)
    - Caché de 1 hora para optimizar
 
-4. **RecommendationAgent** 💡
+4. **RecommendationAgent** 
    - Sistema de decisión multi-factor con 15+ variables:
      - **Señales Técnicas** (40%): Tendencia, momentum, volatilidad, volumen
      - **Predicción** (35%): Score del modelo, confianza, acuerdo ensemble
@@ -183,7 +183,7 @@ graph TB
    - 7 niveles de recomendación (Compra Fuerte → Venta Fuerte)
    - Explicabilidad completa de cada factor
 
-5. **AlertAgent** 🚨
+5. **AlertAgent** 
    - Evaluación de umbrales configurables:
      - **Warning**: 3% de variación
      - **Critical**: 7% de variación
@@ -311,8 +311,8 @@ El script verificará:
 
 **Salida esperada:**
 ```
-🔍 VERIFICACIÓN DE INSTALACIÓN
-🔍 Sistema Multiagente de Seguimiento Financiero
+ VERIFICACIÓN DE INSTALACIÓN
+Sistema Multiagente de Seguimiento Financiero
 
 ============================================================
   Verificando Python
@@ -367,7 +367,7 @@ El dashboard estará disponible en:
 
 El dashboard de Streamlit proporciona una interfaz visual completa para interactuar con el sistema:
 
-### 🔐 Pantalla de Autenticación
+###  Pantalla de Autenticación
 - Login con usuario y contraseña
 - Registro de nuevos usuarios
 - Validación en tiempo real
@@ -389,46 +389,46 @@ El dashboard de Streamlit proporciona una interfaz visual completa para interact
 ```
 
 **Panel de Análisis Técnico:**
-- 📈 Gráfico de precio histórico con candlesticks (Plotly interactivo)
-- 📉 Indicadores técnicos superpuestos:
+- Gráfico de precio histórico con candlesticks (Plotly interactivo)
+- Indicadores técnicos superpuestos:
   - Medias móviles (SMA 20, EMA 12)
   - Bandas de Bollinger
   - MACD
   - RSI
-- 🎯 Score técnico visual (0-10)
-- 📊 Régimen de mercado actual
+-  Score técnico visual (0-10)
+-  Régimen de mercado actual
 
 **Panel de Predicción:**
-- 🔮 Precio predicho con intervalo de confianza (95%)
-- 📊 Gráfico de predicción vs histórico
-- 🎯 Métricas del modelo:
+-  Precio predicho con intervalo de confianza (95%)
+-  Gráfico de predicción vs histórico
+-  Métricas del modelo:
   ```
   ✓ RMSE: 2.45      ✓ R²: 0.89
   ✓ MAPE: 1.32%     ✓ Dir Acc: 73%
   ```
-- 🤖 Contribución de cada modelo en el ensemble
+-  Contribución de cada modelo en el ensemble
 
 **Panel de Sentimiento:**
 - 😊 😐 😢 Indicador visual de sentimiento
-- 📰 Lista de noticias analizadas con scores individuales
-- 📈 Tendencia de sentimiento (mejorando/deteriorando/estable)
-- 🏷️ Temas clave identificados (earnings, M&A, regulatory)
+-  Lista de noticias analizadas con scores individuales
+- Tendencia de sentimiento (mejorando/deteriorando/estable)
+-  Temas clave identificados (earnings, M&A, regulatory)
 
 **Panel de Recomendación:**
 - 🟢 🟡 🔴 Indicador visual de acción (Compra/Mantener/Venta)
-- 💡 Nivel de confianza (barra de progreso)
-- 📝 Explicación detallada de la recomendación
-- ⚠️ Análisis de riesgo:
+-  Nivel de confianza (barra de progreso)
+- Explicación detallada de la recomendación
+-  Análisis de riesgo:
   - VaR 95%
   - Max Drawdown estimado
   - Sharpe Ratio
-- 💰 Position Sizing sugerido:
+-  Position Sizing sugerido:
   - Allocación recomendada (%)
   - Stop Loss
   - Take Profit
   - Risk/Reward Ratio
 
-### 🚨 Centro de Alertas
+###  Centro de Alertas
 ```
 ╔════════════════════════════════════════╗
 ║  🚨 Alertas Activas                    ║
@@ -450,7 +450,7 @@ El dashboard de Streamlit proporciona una interfaz visual completa para interact
 - Estadísticas de alertas
 - Historial completo
 
-### 📈 Estadísticas del Usuario
+###  Estadísticas del Usuario
 - Total de consultas realizadas
 - Activos más consultados
 - Historial de recomendaciones
@@ -1052,7 +1052,7 @@ Si encuentras un problema no listado aquí:
 
 ## Documentación Adicional
 
-- 📘 **[CONFIGURATION.md](CONFIGURATION.md)** - Configuración avanzada y deployment
+-  **[CONFIGURATION.md](CONFIGURATION.md)** - Configuración avanzada y deployment
   - Variables de entorno completas
   - Configuración de bases de datos (PostgreSQL, MySQL)
   - Deployment con Docker y systemd
@@ -1060,14 +1060,14 @@ Si encuentras un problema no listado aquí:
   - Monitoring y logging
   - Backup y recuperación
 
-- 🔍 **[check_setup.py](check_setup.py)** - Script de verificación de instalación
+-  **[check_setup.py](check_setup.py)** - Script de verificación de instalación
   - Valida versión de Python
   - Verifica dependencias instaladas
   - Comprueba estructura del proyecto
   - Valida configuración .env
   - Verifica puertos disponibles
 
-- 💡 **[EXAMPLES.md](EXAMPLES.md)** - Ejemplos prácticos de uso
+-  **[EXAMPLES.md](EXAMPLES.md)** - Ejemplos prácticos de uso
   - Uso básico desde el Dashboard
   - Ejemplos con cURL, Python, JavaScript
   - Casos de uso reales (monitoreo de portafolio, alertas, screener)
@@ -1077,7 +1077,7 @@ Si encuentras un problema no listado aquí:
 
 ## Autor
 
-Fabiana Cid
+Ing. María Fabiana Cid
 
 ## Licencia
 
