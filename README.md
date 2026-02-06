@@ -289,10 +289,14 @@ SECRET_KEY=tu_clave_generada_aqui
 | `DATABASE_URL` | Conexión a base de datos | SQLite local | `sqlite:///./financial_tracker.db` |
 | `ALERT_THRESHOLD_WARNING` | Umbral alerta warning (%) | `3.0` | `3.0` |
 | `ALERT_THRESHOLD_CRITICAL` | Umbral alerta crítica (%) | `7.0` | `7.0` |
-| `SMTP_SERVER` | Servidor email (futuro) | - | `smtp.gmail.com` |
-| `SMTP_PORT` | Puerto SMTP (futuro) | - | `587` |
+| `SMTP_SERVER` | Servidor email (opcional) | - | `smtp.gmail.com` |
+| `SMTP_PORT` | Puerto SMTP (opcional) | - | `587` |
+| `SMTP_USER` | Usuario email (opcional) | - | `tu_email@gmail.com` |
+| `SMTP_PASSWORD` | Contraseña de aplicación (opcional) | - | `tu_app_password` |
 
-**Nota:** Las notificaciones por email no están implementadas en la versión actual, pero la configuración está preparada para futuras extensiones.
+**Nota sobre SMTP:**
+- **Sin SMTP configurado**: El sistema funciona normalmente. Los tokens de recuperación de contraseña aparecen en los logs del backend.
+- **Con SMTP configurado**: Los tokens se envían automáticamente por email para mejor experiencia de usuario.
 
 ### 5. Verificar la instalación (Recomendado)
 
@@ -475,7 +479,74 @@ curl -X POST http://localhost:8000/auth/login \
   -d "username=usuario&password=password123"
 ```
 
-### 3. Análisis de Activo
+### 3. Recuperar Contraseña (Sin SMTP Configurado)
+
+Si olvidaste tu contraseña y no tienes SMTP configurado, sigue estos pasos:
+
+#### Paso 1: Solicitar Token de Reseteo
+
+Desde el dashboard o via API:
+
+```bash
+curl -X POST http://localhost:8000/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"email": "tu_email@example.com"}'
+```
+
+**Respuesta:**
+```json
+{
+  "message": "Si el email está registrado, recibirás instrucciones para resetear tu contraseña.",
+  "detail": "Por seguridad, no indicamos si el email existe o no."
+}
+```
+
+#### Paso 2: Obtener el Token de los Logs
+
+Como SMTP no está configurado, el token se imprime en los logs del backend. Busca en la consola donde ejecutaste `uvicorn`:
+
+```bash
+# Buscar en logs del backend
+grep "Token de reseteo" <archivo_logs>
+
+# Verás algo como:
+# INFO - Token de reseteo para tu_usuario: ABC123XYZ456...
+```
+
+**Ejemplo del log:**
+```
+2026-02-06 14:12:11,167 - backend.email_service - INFO - Token de reseteo para demo_test: Id6SNF3G-Ua7ev4jvvHU0tb4WvkcdPoEAHujZzPob__3quId16e5e2kGFh0tEapA
+```
+
+**Copia el token completo** (la cadena después de los dos puntos).
+
+#### Paso 3: Resetear la Contraseña con el Token
+
+Usa el token para establecer una nueva contraseña:
+
+```bash
+curl -X POST http://localhost:8000/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "ABC123XYZ456...",
+    "new_password": "NuevaPassword123!"
+  }'
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "message": "Contraseña actualizada exitosamente",
+  "detail": "Ya puedes iniciar sesión con tu nueva contraseña"
+}
+```
+
+**⚠️ Notas Importantes:**
+- El token expira en 1 hora
+- El token es de un solo uso
+- Si SMTP está configurado, recibirás el token por email automáticamente
+
+### 4. Análisis de Activo
 
 ```bash
 curl -X GET http://localhost:8000/predict/AAPL \
@@ -991,6 +1062,41 @@ uvicorn backend.main:app --reload
 - Considera las predicciones como estimaciones, no certezas
 - Revisa el intervalo de confianza (rango) además del valor puntual
 - Evalúa las métricas (RMSE, MAPE) para entender la precisión
+
+---
+
+#### 🔴 No recibo el email de recuperación de contraseña
+
+**Causa:** SMTP no está configurado (comportamiento normal)
+
+**Solución:**
+
+El sistema está diseñado para funcionar sin SMTP. El token aparece en los logs del backend:
+
+```bash
+# 1. Busca en la consola donde ejecutaste uvicorn
+# Verás una línea como esta:
+# INFO - Token de reseteo para tu_usuario: ABC123XYZ456...
+
+# 2. O busca en logs si los guardaste
+grep "Token de reseteo" backend.log
+
+# 3. Ejemplo de salida:
+# 2026-02-06 14:12:11 - backend.email_service - INFO - Token de reseteo para demo_test: Id6SNF3G-Ua7ev4jvvHU0tb4WvkcdPoEAHujZzPob__3quId16e5e2kGFh0tEapA
+```
+
+**Copia el token completo** y úsalo en el endpoint `/auth/reset-password` o en el dashboard (botón "Tengo el token").
+
+**Para configurar SMTP (opcional):**
+```bash
+# Agrega a tu archivo .env:
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=tu_email@gmail.com
+SMTP_PASSWORD=tu_app_password  # No uses tu contraseña regular
+```
+
+**⚠️ Nota:** Con Gmail necesitas una "Contraseña de Aplicación", no tu contraseña normal.
 
 ---
 

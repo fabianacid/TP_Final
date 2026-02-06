@@ -277,22 +277,25 @@ def render_forgot_password_form():
                     st.success(message)
                     st.info("Si tu email está registrado, recibirás un link de recuperación. Revisa tu bandeja de entrada y spam.")
                     st.info("⏰ El link expira en 1 hora por seguridad.")
-
-                    # Mostrar campo para ingresar token si SMTP no está configurado
-                    st.markdown("---")
-                    st.warning("💡 Si no configuraste SMTP, el token aparece en los logs del backend. Puedes usarlo manualmente:")
-                    if st.button("Tengo el token, resetear ahora"):
-                        st.session_state.auth_view = "reset_password"
-                        st.rerun()
+                    st.warning("💡 Si no configuraste SMTP, el token aparece en los logs del backend. Puedes usarlo manualmente.")
                 else:
                     st.info(message)
             else:
                 st.warning("Ingresa tu email")
 
+    # Botones fuera del formulario
     st.markdown("---")
-    if st.button("← Volver al login", use_container_width=True):
-        st.session_state.auth_view = "login"
-        st.rerun()
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("← Volver al login", use_container_width=True):
+            st.session_state.auth_view = "login"
+            st.rerun()
+
+    with col2:
+        if st.button("Tengo el token →", use_container_width=True, type="primary"):
+            st.session_state.auth_view = "reset_password"
+            st.rerun()
 
 
 def render_reset_password_form():
