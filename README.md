@@ -1075,7 +1075,7 @@ Si encuentras un problema no listado aquí:
   - Cliente Python completo
   - Mejores prácticas
 
-## Autor
+## Alumna:
 
 Ing. María Fabiana Cid
 
