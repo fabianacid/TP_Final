@@ -40,9 +40,10 @@ Prototipo funcional de un sistema inteligente basado en agentes para el seguimie
 Este proyecto implementa un sistema multiagente que integra:
 
 - **Obtención de datos de mercado** mediante yfinance
-- **Predicción de precios** con modelos de aprendizaje automático
-- **Análisis de sentimiento** (extensible)
-- **Generación de recomendaciones** explicables
+- **Análisis técnico** con 35+ indicadores y detección de anomalías
+- **Predicción de precios** con ensemble de 9 modelos de ML
+- **Análisis de sentimiento** con 4 métodos NLP
+- **Generación de recomendaciones** explicables multi-factor
 - **Sistema de alertas** con umbrales configurables
 
 ## Arquitectura
@@ -87,7 +88,7 @@ graph TB
          ┌────────────────────────────────────┐
          │  1️⃣ MarketAgent                    │
          │  • Descarga datos históricos       │
-         │  • Calcula 20+ indicadores técnicos│
+         │  • Calcula 35+ indicadores técnicos│
          │  • SMA, EMA, RSI, MACD, Bollinger  │
          │  • Score técnico ponderado         │
          └────────────┬───────────────────────┘
@@ -133,11 +134,13 @@ graph TB
 
 1. **MarketAgent** 🔍
    - Descarga datos históricos de Yahoo Finance
-   - Calcula 20+ indicadores técnicos avanzados:
+   - Calcula 35+ indicadores técnicos avanzados:
      - **Tendencia**: SMA, EMA, MACD, ADX, Ichimoku, Parabolic SAR
      - **Momentum**: RSI, Stochastic, Williams %R, ROC, CCI
      - **Volatilidad**: Bollinger Bands, ATR, Keltner Channels
      - **Volumen**: OBV, VWAP, MFI, ADL, CMF
+   - **Detección de anomalías** con 5 algoritmos:
+     - Z-Score, MAD, CUSUM, Isolation Forest, Volume Anomaly
    - Genera señales de mercado con scoring ponderado
    - Identifica régimen de mercado (trending/ranging)
    - Detecta soportes y resistencias
@@ -150,7 +153,7 @@ graph TB
      - XGBoost (si disponible)
      - LightGBM (si disponible)
      - LSTM Neural Network (si PyTorch disponible)
-   - Feature engineering con 30+ características
+   - Feature engineering con 50+ características
    - Walk-forward validation temporal
    - Predicción con intervalos de confianza (95%)
    - Métricas completas: RMSE, MAPE, MAE, R², Direction Accuracy

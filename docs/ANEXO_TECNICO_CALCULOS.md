@@ -380,16 +380,20 @@ Score final = (0.125 × 0.40) + (1.0 × 0.35) + (0.5 × 0.25)
 
 ### 2.1 Arquitectura del Ensemble
 
-**Modelos utilizados**:
-1. Random Forest Regressor
-2. XGBoost Regressor
-3. LightGBM Regressor
-4. Gradient Boosting Regressor
-5. Ridge Regression
+**Modelos utilizados** (9 modelos en total):
+1. Linear Regression (regresión lineal básica)
+2. Ridge Regression (regresión con regularización L2)
+3. Lasso Regression (regresión con regularización L1)
+4. ElasticNet Regression (combinación L1 + L2)
+5. Random Forest Regressor (ensemble de árboles)
+6. Gradient Boosting Regressor (boosting gradual)
+7. XGBoost Regressor (gradient boosting optimizado)
+8. LightGBM Regressor (gradient boosting eficiente)
+9. LSTM Neural Network (red neuronal recurrente, si PyTorch disponible)
 
 ### 2.2 Features (Variables de Entrada)
 
-**El sistema utiliza más de 30 features** organizadas en categorías:
+**El sistema utiliza más de 50 features** organizadas en categorías:
 
 #### 2.2.1 Features de Precio
 
@@ -487,7 +491,7 @@ features_patrones = [
 ]
 ```
 
-**Total**: 30+ features
+**Total**: 50+ features
 
 ### 2.3 Target (Variable Objetivo)
 
