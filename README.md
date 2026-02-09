@@ -228,8 +228,7 @@ proyecto_final/
 │   ├── test_functional.py   # Pruebas funcionales (30 tests)
 │   └── test_performance.py  # Pruebas de carga
 ├── test_results/             # Resultados de pruebas
-│   ├── graficos/            # Gráficos para tesis (PDF/PNG)
-│   ├── capitulos_4_y_5.tex  # LaTeX para Overleaf
+│   ├── graficos/            # Gráficos (PDF/PNG)
 │   └── *.json               # Resultados en JSON
 ├── requirements.txt
 ├── requirements-test.txt     # Dependencias de testing
