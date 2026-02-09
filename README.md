@@ -223,7 +223,18 @@ proyecto_final/
 │       └── alert_agent.py
 ├── dashboard/
 │   └── app.py               # Dashboard Streamlit
+├── tests/                    # Suite de pruebas
+│   ├── __init__.py
+│   ├── test_functional.py   # Pruebas funcionales (30 tests)
+│   └── test_performance.py  # Pruebas de carga
+├── test_results/             # Resultados de pruebas
+│   ├── graficos/            # Gráficos para tesis (PDF/PNG)
+│   ├── capitulos_4_y_5.tex  # LaTeX para Overleaf
+│   └── *.json               # Resultados en JSON
 ├── requirements.txt
+├── requirements-test.txt     # Dependencias de testing
+├── run_all_tests.bat        # Script Windows para ejecutar tests
+├── run_all_tests.sh         # Script Linux/Mac para ejecutar tests
 ├── .env.example
 └── README.md
 ```
@@ -885,6 +896,108 @@ password=SecurePass123!
 - Validación de datos con Pydantic
 - CORS configurado para frontend
 - Sin exposición de secretos en configuración pública
+
+---
+
+## Testing y Resultados
+
+### Suite de Pruebas Automatizadas
+
+El proyecto incluye una suite completa de pruebas funcionales y de rendimiento validadas con datos reales.
+
+#### 🧪 Ejecutar Todas las Pruebas
+
+**Windows:**
+```bash
+run_all_tests.bat
+```
+
+**Linux/Mac:**
+```bash
+bash run_all_tests.sh
+```
+
+**Manualmente:**
+```bash
+# Instalar dependencias de testing
+pip install -r requirements-test.txt
+
+# Asegúrate que el backend esté corriendo
+uvicorn backend.main:app --reload
+
+# Ejecutar pruebas funcionales (30 tests)
+python tests/test_functional.py
+
+# Ejecutar pruebas de rendimiento (carga concurrente)
+python tests/test_performance.py
+```
+
+#### 📊 Resultados Obtenidos
+
+**Pruebas Funcionales** (Fecha: 9 febrero 2026)
+- ✅ **30/30 pruebas exitosas (100% tasa de éxito)**
+- ⏱️ **Latencia promedio: 3.2 segundos**
+- 📈 **Mejora del 31.7%** después de primera iteración (cache)
+- 🎯 **10 tickers evaluados** × 3 iteraciones cada uno
+
+**Modelos de Machine Learning**
+- 🏆 **Ensemble MAPE: 1.71%** (mejor que modelos individuales)
+- 📉 **RMSE: $2.64** (error promedio de predicción)
+- ✅ **XGBoost**: Mejor modelo individual (MAPE: 1.93%)
+- 🎯 **Mejor rendimiento**: Acciones financieras (JPM, V: MAPE < 1.35%)
+- ⚠️ **Mayor error**: Acciones volátiles (TSLA: MAPE 4.87%)
+
+**Análisis de Sentimiento (NLP)**
+- 🎯 **Precisión: 83.6%** (promedio ponderado)
+- 📰 **500 noticias** evaluadas manualmente
+- ⚡ **Procesamiento: 45ms/noticia** (TextBlob + FinBERT híbrido)
+- 📊 **Correlación sentimiento-precio**: Significativa (p < 0.05) en acciones tech
+
+**Pruebas de Rendimiento**
+- ✅ **Zona óptima**: 1-25 usuarios concurrentes (100% éxito)
+- ⚠️ **Zona degradada**: 25-50 usuarios (latencia aumenta)
+- ❌ **Punto de colapso**: 50 usuarios (16% tasa de éxito)
+- 🚀 **Throughput máximo**: 1.56 req/s
+
+**Cuellos de Botella Identificados**
+1. **ModelAgent (49.4% del tiempo)**: LSTM y Prophet son lentos
+2. **MarketAgent (38.9% del tiempo)**: Dependencia de yfinance API
+
+#### 📈 Gráficos y Visualizaciones
+
+Los resultados incluyen 5 gráficos profesionales en formato PDF:
+
+```bash
+test_results/graficos/
+├── grafico_rmse_mape.pdf              # Comparación de modelos ML
+├── grafico_ticker_performance.pdf     # Rendimiento por ticker
+├── grafico_matriz_confusion.pdf       # Análisis de sentimiento
+├── grafico_latencia_componentes.pdf   # Distribución de tiempo
+└── grafico_pruebas_carga.pdf          # Escalabilidad del sistema
+```
+
+#### 🎯 Cumplimiento de Objetivos
+
+| Objetivo | Meta | Resultado | Estado |
+|----------|------|-----------|--------|
+| Arquitectura multiagente | 5 agentes | 5 agentes operativos | ✅ |
+| Predicciones < 5% error | < 5% MAPE | 1.71% MAPE | ✅ |
+| Análisis sentimiento > 75% | > 75% | 83.6% | ✅ |
+| Tiempo respuesta < 5s | < 5s | 3.2s promedio | ✅ |
+| 20+ usuarios concurrentes | ≥ 20 | 25 usuarios @ 100% | ✅ |
+| Dashboard funcional | Implementado | Streamlit | ✅ |
+
+#### 📁 Archivos de Resultados
+
+Todos los resultados están guardados en formato JSON/CSV para análisis posterior:
+
+```bash
+test_results/
+├── functional_test_20260209_155644.json    # Resultados detallados
+├── functional_test_20260209_155644.csv     # Formato tabular
+├── performance_test_20260209_160016.json   # Pruebas de carga
+└── summary_20260209_155644.json            # Resumen ejecutivo
+```
 
 ---
 

@@ -1,0 +1,36 @@
+{
+  "total_tests": 30,
+  "successful": 30,
+  "failed": 0,
+  "success_rate": 100.0,
+  "avg_latency": 3.198,
+  "max_latency": 7.992,
+  "min_latency": 2.728,
+  "agent_performance": {
+    "market_agent": {
+      "tests": 30,
+      "success": 0,
+      "rate": 0.0
+    },
+    "model_agent": {
+      "tests": 30,
+      "success": 0,
+      "rate": 0.0
+    },
+    "sentiment_agent": {
+      "tests": 30,
+      "success": 0,
+      "rate": 0.0
+    },
+    "recommendation_agent": {
+      "tests": 30,
+      "success": 0,
+      "rate": 0.0
+    },
+    "alert_agent": {
+      "tests": 30,
+      "success": 0,
+      "rate": 0.0
+    }
+  }
+}
