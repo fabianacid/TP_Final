@@ -51,7 +51,7 @@ router = APIRouter(
 # Instanciar agentes (singleton pattern)
 # Usar 1 año de datos para tener suficientes features para el ensemble ML
 market_agent = MarketAgent(ventana_ma=20, periodo_historico="1y")
-model_agent = ModelAgent(ventana_entrenamiento=30)
+model_agent = ModelAgent(ventana_entrenamiento=252)  # 1 año completo para mejor precisión
 sentiment_agent = SentimentAgent()
 recommendation_agent = RecommendationAgent()
 alert_agent = AlertAgent(
@@ -160,7 +160,8 @@ async def predict_ticker(
             # Usar valores por defecto si falla la predicción
             precio_predicho = market_data.ultimo_precio
             variacion_pct = 0.0
-            rmse = mape = mae = 0.0
+            rmse = mape = mae = r2 = 0.0
+            accuracy = precision = recall = f1 = auc = 0.0
             parametros = {}
             modelos_usados = {}
             logger.warning(f"[{ticker}] ModelAgent: Predicción no disponible")
@@ -170,6 +171,13 @@ async def predict_ticker(
             rmse = prediction.rmse
             mape = prediction.mape
             mae = prediction.mae
+            r2 = prediction.metricas_completas.r2
+            # Métricas de clasificación
+            accuracy = prediction.metricas_completas.accuracy
+            precision = prediction.metricas_completas.precision
+            recall = prediction.metricas_completas.recall
+            f1 = prediction.metricas_completas.f1
+            auc = prediction.metricas_completas.auc
             parametros = prediction.parametros
             # Incluir predicciones de cada modelo
             modelos_usados = {
@@ -254,11 +262,19 @@ async def predict_ticker(
             prediccion={
                 "precio_predicho": precio_predicho,
                 "variacion_pct": variacion_pct,
-                "modelo": "ensemble_ml",
+                "modelo": "ensemble_classification",
                 "metricas": {
+                    # Métricas de clasificación
+                    "accuracy": accuracy,
+                    "precision": precision,
+                    "recall": recall,
+                    "f1": f1,
+                    "auc": auc,
+                    # Legacy para compatibilidad
                     "rmse": rmse,
                     "mape": mape,
-                    "mae": mae
+                    "mae": mae,
+                    "r2": r2
                 },
                 "parametros": parametros,
                 "modelos_detalle": modelos_usados
