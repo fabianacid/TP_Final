@@ -2,7 +2,7 @@
 
 Este documento proporciona información detallada sobre la configuración del sistema para usuarios avanzados y escenarios de producción.
 
-## 📑 Contenidos
+##  Contenidos
 
 - [Variables de Entorno](#variables-de-entorno)
 - [Configuración de Base de Datos](#configuración-de-base-de-datos)

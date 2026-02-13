@@ -277,7 +277,7 @@ def render_forgot_password_form():
                     st.success(message)
                     st.info("Si tu email está registrado, recibirás un link de recuperación. Revisa tu bandeja de entrada y spam.")
                     st.info("⏰ El link expira en 1 hora por seguridad.")
-                    st.warning("💡 Si no configuraste SMTP, el token aparece en los logs del backend. Puedes usarlo manualmente.")
+                    st.warning("Si no configuraste SMTP, el token aparece en los logs del backend. Puedes usarlo manualmente.")
                 else:
                     st.info(message)
             else:
@@ -521,22 +521,32 @@ def render_prediction_card(prediccion: Dict, precio_actual: float = 0):
         direccion = "Estable"
         color_class = "neutral"
 
+    # Calcular probabilidad de subida basada en variación
+    prob_subida = 50 + (variacion / 2)  # Aproximación desde la variación
+    prob_subida = max(0, min(100, prob_subida))  # Limitar entre 0-100
+
     st.markdown(f"""
         <div class='card'>
-            <div class='metric-label'>Tendencia Esperada</div>
+            <div class='metric-label'>Predicción del Modelo (Horizonte: 3 días)</div>
             <div class='metric-value {color_class}' style='margin-bottom:15px'>{direccion}</div>
-            <div style='display:flex;gap:40px;flex-wrap:wrap'>
+            <div style='display:flex;gap:40px;flex-wrap:wrap;margin-bottom:15px'>
                 <div>
                     <div class='metric-label'>Precio Actual</div>
                     <div style='font-size:1.3rem;font-weight:600'>${precio_actual:.2f}</div>
                 </div>
                 <div>
-                    <div class='metric-label'>Precio Proyectado</div>
+                    <div class='metric-label'>Precio Proyectado (3 días)</div>
                     <div class='metric-value {color_class}'>${precio_predicho:.2f}</div>
                 </div>
                 <div>
                     <div class='metric-label'>Variación Esperada</div>
                     <div class='metric-value {color_class}'>{variacion:+.2f}%</div>
+                </div>
+            </div>
+            <div style='background:#f8f9fa;padding:10px;border-radius:8px;margin-top:10px'>
+                <div style='font-size:0.85rem;color:#666'>Probabilidad de dirección:</div>
+                <div style='font-size:1.1rem;font-weight:600;margin-top:5px'>
+                    {'⬆️ SUBIDA' if variacion > 0 else '⬇️ BAJADA'}: {abs(prob_subida):.1f}%
                 </div>
             </div>
         </div>
@@ -573,21 +583,24 @@ def render_prediction_card(prediccion: Dict, precio_actual: float = 0):
             mejor = prediccion.get('parametros', {}).get('mejor_modelo', 'N/A')
             st.info(f"Modelo con mejor rendimiento: **{nombres_modelos.get(mejor, mejor)}**")
 
-        # Métricas de precisión
+        # Métricas de clasificación (predicción de dirección)
         st.markdown("---")
-        st.markdown("**Métricas de precisión:**")
+        st.markdown("**Métricas del Modelo (Clasificación):**")
+        st.caption("El modelo predice si el precio SUBE ⬆️ o BAJA ⬇️")
         metricas = prediccion.get('metricas', {})
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("RMSE", f"${metricas.get('rmse', 0):.2f}", help="Error cuadrático medio")
+            accuracy = metricas.get('accuracy', 0) * 100
+            st.metric("Accuracy", f"{accuracy:.1f}%", help="% de veces que predice correctamente si sube o baja")
         with col2:
-            mape = metricas.get('mape', 0)
-            st.metric("MAPE", f"{mape:.2f}%", help="Error porcentual absoluto medio")
+            precision = metricas.get('precision', 0) * 100
+            st.metric("Precision", f"{precision:.1f}%", help="Cuando predice SUBIDA, % de veces que acierta")
         with col3:
-            st.metric("MAE", f"${metricas.get('mae', 0):.2f}", help="Error absoluto medio")
+            recall = metricas.get('recall', 0) * 100
+            st.metric("Recall", f"{recall:.1f}%", help="% de subidas reales que detecta correctamente")
         with col4:
-            r2 = metricas.get('r2', 0)
-            st.metric("R²", f"{r2:.4f}", help="Coeficiente de determinación (1.0 = predicción perfecta)")
+            f1 = metricas.get('f1', 0) * 100
+            st.metric("F1-Score", f"{f1:.1f}%", help="Balance entre Precision y Recall")
 
 
 def render_sentiment_card(sentimiento: Dict):
@@ -737,14 +750,34 @@ def render_price_chart(ticker: str, prediction_data: Dict):
         line=dict(color='#f59e0b', width=1, dash='dash')
     ))
 
-    # Punto de predicción
-    future_date = dates[-1] + pd.Timedelta(days=1)
+    # Proyección de 3 días (horizonte de predicción)
+    # Calcular trayectoria lineal desde precio actual hasta precio predicho en 3 días
+    precio_actual = mercado['ultimo_precio']
+    precio_predicho = prediccion['precio_predicho']
+
+    # Crear puntos para días 1, 2 y 3
+    future_dates = [dates[-1] + pd.Timedelta(days=i) for i in range(1, 4)]
+    step = (precio_predicho - precio_actual) / 3
+    future_prices = [precio_actual + step * i for i in range(1, 4)]
+
+    # Línea de proyección
     fig.add_trace(go.Scatter(
-        x=[future_date],
-        y=[prediccion['precio_predicho']],
+        x=[dates[-1]] + future_dates,
+        y=[precio_actual] + future_prices,
+        mode='lines+markers',
+        name='Proyección 3 días',
+        line=dict(color='#10b981', width=2, dash='dot'),
+        marker=dict(color='#10b981', size=8)
+    ))
+
+    # Resaltar el punto final (día 3)
+    fig.add_trace(go.Scatter(
+        x=[future_dates[-1]],
+        y=[precio_predicho],
         mode='markers',
-        name='Predicción',
-        marker=dict(color='#10b981', size=12, symbol='diamond')
+        name='Objetivo día 3',
+        marker=dict(color='#10b981', size=14, symbol='diamond', line=dict(color='white', width=2)),
+        showlegend=False
     ))
 
     fig.update_layout(
@@ -817,6 +850,7 @@ def render_main_dashboard():
     render_sidebar()
 
     st.markdown("<h1 class='main-header'>Sistema de Alertas Financieras</h1>", unsafe_allow_html=True)
+    st.caption("Sistema multiagente que predice la dirección del precio (subida/bajada) a 3 días")
     st.markdown("---")
 
     tab1, tab2 = st.tabs(["Análisis de Activos", "Historial de Alertas"])

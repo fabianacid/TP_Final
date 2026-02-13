@@ -26,8 +26,7 @@ def solicitar_token(email):
     if response.status_code == 200:
         print("✅ Solicitud exitosa!")
         print("📋 Ahora busca el token en los logs del backend.")
-        print("\nEjecuta este comando en otra terminal:")
-        print('tail -n 100 "C:\\Users\\mfabi\\AppData\\Local\\Temp\\claude\\C--Users-mfabi-OneDrive-Escritorio-Posgrado-IA-Taller-A-proyecto-final\\tasks\\b757d89.output" | grep "Token de reseteo"')
+        print("\nBusca en la consola donde ejecutaste uvicorn o en los archivos de log.")
         print("\nVerás algo como:")
         print('INFO - Token de reseteo para tu_usuario: AbCdEf123...XyZ456')
         print("\nCopia el token completo.")

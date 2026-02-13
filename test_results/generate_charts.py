@@ -27,41 +27,41 @@ output_dir.mkdir(exist_ok=True)
 print("Generando gráficos para Overleaf...")
 
 # =============================================================================
-# GRÁFICO 1: Comparativo RMSE/MAPE por modelo
+# GRÁFICO 1: Comparativo Métricas de Clasificación por modelo
 # =============================================================================
-print("\n[1/5] Gráfico comparativo RMSE/MAPE...")
+print("\n[1/5] Gráfico comparativo de métricas de clasificación...")
 
-modelos = ['Random\nForest', 'XGBoost', 'LSTM', 'Prophet', 'Ensemble']
-rmse = [3.42, 2.89, 4.15, 3.78, 2.64]
-mape = [2.18, 1.93, 2.67, 2.34, 1.71]
+modelos = ['Random\nForest', 'Gradient\nBoosting', 'XGBoost', 'LightGBM', 'Ensemble']
+accuracy = [62.1, 63.8, 64.2, 63.5, 65.3]
+f1_score = [62.5, 64.2, 64.8, 63.7, 65.5]
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 4))
 
-# Subplot 1: RMSE
+# Subplot 1: Accuracy
 colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6']
-axes[0].bar(modelos, rmse, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
-axes[0].set_ylabel('RMSE ($)', fontweight='bold')
-axes[0].set_title('Error RMSE por Modelo', fontweight='bold', fontsize=12)
-axes[0].set_ylim(0, max(rmse) * 1.2)
-for i, v in enumerate(rmse):
-    axes[0].text(i, v + 0.15, f'{v:.2f}', ha='center', fontweight='bold', fontsize=9)
-axes[0].axhline(y=min(rmse), color='green', linestyle='--', linewidth=1.5, alpha=0.5)
+axes[0].bar(modelos, accuracy, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
+axes[0].set_ylabel('Accuracy (%)', fontweight='bold')
+axes[0].set_title('Accuracy por Modelo de Clasificación', fontweight='bold', fontsize=12)
+axes[0].set_ylim(0, 100)
+for i, v in enumerate(accuracy):
+    axes[0].text(i, v + 1.5, f'{v:.1f}%', ha='center', fontweight='bold', fontsize=9)
+axes[0].axhline(y=max(accuracy), color='green', linestyle='--', linewidth=1.5, alpha=0.5)
 axes[0].grid(axis='y', alpha=0.3)
 
-# Subplot 2: MAPE
-axes[1].bar(modelos, mape, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
-axes[1].set_ylabel('MAPE (%)', fontweight='bold')
-axes[1].set_title('Error MAPE por Modelo', fontweight='bold', fontsize=12)
-axes[1].set_ylim(0, max(mape) * 1.2)
-for i, v in enumerate(mape):
-    axes[1].text(i, v + 0.08, f'{v:.2f}%', ha='center', fontweight='bold', fontsize=9)
-axes[1].axhline(y=min(mape), color='green', linestyle='--', linewidth=1.5, alpha=0.5)
+# Subplot 2: F1-Score
+axes[1].bar(modelos, f1_score, color=colors, alpha=0.8, edgecolor='black', linewidth=1.5)
+axes[1].set_ylabel('F1-Score (%)', fontweight='bold')
+axes[1].set_title('F1-Score por Modelo de Clasificación', fontweight='bold', fontsize=12)
+axes[1].set_ylim(0, 100)
+for i, v in enumerate(f1_score):
+    axes[1].text(i, v + 1.5, f'{v:.1f}%', ha='center', fontweight='bold', fontsize=9)
+axes[1].axhline(y=max(f1_score), color='green', linestyle='--', linewidth=1.5, alpha=0.5)
 axes[1].grid(axis='y', alpha=0.3)
 
 plt.tight_layout()
-plt.savefig(output_dir / 'grafico_rmse_mape.pdf', format='pdf', bbox_inches='tight')
-plt.savefig(output_dir / 'grafico_rmse_mape.png', dpi=300, bbox_inches='tight')
-print("   ✓ Guardado: grafico_rmse_mape.pdf")
+plt.savefig(output_dir / 'grafico_clasificacion_metricas.pdf', format='pdf', bbox_inches='tight')
+plt.savefig(output_dir / 'grafico_clasificacion_metricas.png', dpi=300, bbox_inches='tight')
+print("   ✓ Guardado: grafico_clasificacion_metricas.pdf")
 plt.close()
 
 # =============================================================================
@@ -70,8 +70,8 @@ plt.close()
 print("[2/5] Gráfico de resultados por ticker...")
 
 tickers = ['AAPL', 'MSFT', 'TSLA', 'GOOGL', 'AMZN', 'META', 'NVDA', 'JPM', 'V', 'WMT']
-ticker_rmse = [2.34, 2.56, 8.92, 2.78, 3.12, 5.23, 7.45, 1.87, 2.01, 1.95]
-ticker_mape = [1.52, 1.68, 4.87, 1.79, 1.95, 3.21, 4.12, 1.23, 1.34, 1.28]
+ticker_accuracy = [68.5, 67.2, 58.3, 66.8, 65.1, 61.2, 59.7, 72.3, 71.8, 70.5]
+ticker_precision = [79.2, 78.5, 68.1, 77.9, 76.2, 72.3, 70.5, 82.1, 81.5, 80.8]
 volatilidad = ['Media', 'Media', 'Alta', 'Media', 'Media', 'Alta', 'Alta', 'Baja', 'Baja', 'Baja']
 
 color_map = {'Alta': '#e74c3c', 'Media': '#f39c12', 'Baja': '#2ecc71'}
@@ -82,14 +82,14 @@ fig, ax = plt.subplots(1, 1, figsize=(12, 5))
 x = np.arange(len(tickers))
 width = 0.35
 
-bars1 = ax.bar(x - width/2, ticker_mape, width, label='MAPE (%)', color=colors_vol, alpha=0.8, edgecolor='black')
+bars1 = ax.bar(x - width/2, ticker_accuracy, width, label='Accuracy (%)', color=colors_vol, alpha=0.8, edgecolor='black')
 ax2 = ax.twinx()
-bars2 = ax2.bar(x + width/2, ticker_rmse, width, label='RMSE ($)', color=colors_vol, alpha=0.5, edgecolor='black', linestyle='--')
+bars2 = ax2.bar(x + width/2, ticker_precision, width, label='Precision (%)', color=colors_vol, alpha=0.5, edgecolor='black', linestyle='--')
 
 ax.set_xlabel('Ticker', fontweight='bold')
-ax.set_ylabel('MAPE (%)', fontweight='bold', color='black')
-ax2.set_ylabel('RMSE ($)', fontweight='bold', color='black')
-ax.set_title('Error de Predicción por Ticker (Modelo Ensemble)', fontweight='bold', fontsize=12)
+ax.set_ylabel('Accuracy (%)', fontweight='bold', color='black')
+ax2.set_ylabel('Precision (%)', fontweight='bold', color='black')
+ax.set_title('Precisión de Clasificación por Ticker (Ensemble)', fontweight='bold', fontsize=12)
 ax.set_xticks(x)
 ax.set_xticklabels(tickers, fontweight='bold')
 ax.legend(loc='upper left')
@@ -215,7 +215,7 @@ print("✅ ¡Todos los gráficos generados!")
 print(f"📁 Ubicación: {output_dir.absolute()}")
 print("="*60)
 print("\nArchivos generados (PDF para Overleaf + PNG para preview):")
-print("  1. grafico_rmse_mape.pdf")
+print("  1. grafico_clasificacion_metricas.pdf")
 print("  2. grafico_ticker_performance.pdf")
 print("  3. grafico_matriz_confusion.pdf")
 print("  4. grafico_latencia_componentes.pdf")

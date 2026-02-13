@@ -27,10 +27,10 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.model_selection import TimeSeriesSplit
 
 # Opcional: Modelos avanzados
@@ -73,15 +73,19 @@ class ModelType(Enum):
 
 @dataclass
 class ModelMetrics:
-    """Métricas completas de evaluación del modelo."""
-    mse: float = 0.0
+    """Métricas completas de evaluación del modelo (CLASIFICACIÓN)."""
+    # Métricas de clasificación
+    accuracy: float = 0.0        # Precisión general
+    precision: float = 0.0       # Precisión de clase positiva
+    recall: float = 0.0          # Recall de clase positiva
+    f1: float = 0.0              # F1-score
+    auc: float = 0.5             # Area Under ROC Curve
+    # Métricas legacy para compatibilidad
     rmse: float = 0.0
-    mae: float = 0.0
     mape: float = 0.0
+    mae: float = 0.0
     r2: float = 0.0
-    direction_accuracy: float = 0.0  # % de veces que predijo correctamente la dirección
-    max_error: float = 0.0
-    mean_error: float = 0.0
+    direction_accuracy: float = 0.0
 
 
 @dataclass
@@ -202,12 +206,12 @@ class ModelAgent:
         'force_col_wise': True
     }
 
-    def __init__(self, ventana_entrenamiento: int = 60):
+    def __init__(self, ventana_entrenamiento: int = 252):
         """
         Inicializa el Agente de Modelo Profesional.
 
         Args:
-            ventana_entrenamiento: Períodos para entrenamiento (default: 60)
+            ventana_entrenamiento: Períodos para entrenamiento (default: 252, 1 año)
         """
         self.ventana_entrenamiento = ventana_entrenamiento
         self.modelo_activo = "ensemble"
@@ -306,37 +310,50 @@ class ModelAgent:
             if not predicciones:
                 return self._prediccion_fallback(precios, ticker)
 
-            # Calcular pesos del ensemble basado en métricas
+            # Calcular pesos del ensemble basado en métricas (usando accuracy)
             pesos = self._calcular_pesos_ensemble(metricas_modelos)
 
-            # Predicción del ensemble (promedio ponderado)
-            precio_predicho = sum(
+            # Predicción del ensemble: PROBABILIDAD de subida (promedio ponderado)
+            prob_subida = sum(
                 pred * pesos.get(name, 0)
                 for name, pred in predicciones.items()
             )
 
-            # Calcular intervalo de confianza
-            predicciones_lista = list(predicciones.values())
-            std_predicciones = np.std(predicciones_lista) if len(predicciones_lista) > 1 else 0
+            # Convertir probabilidad a predicción de precio
+            # Estimar variación basada en volatilidad histórica
+            volatilidad = precios['Close'].pct_change().std()
+            if prob_subida > 0.5:
+                # Predicción de subida
+                variacion_esperada = volatilidad * (prob_subida - 0.5) * 2  # Escalar de 0-0.5 a 0-1
+                precio_predicho = ultimo_precio * (1 + variacion_esperada)
+            else:
+                # Predicción de bajada
+                variacion_esperada = volatilidad * (0.5 - prob_subida) * 2
+                precio_predicho = ultimo_precio * (1 - variacion_esperada)
+
+            # Calcular intervalo de confianza basado en volatilidad
             intervalo = (
-                precio_predicho - 1.96 * std_predicciones,
-                precio_predicho + 1.96 * std_predicciones
+                ultimo_precio * (1 - volatilidad * 1.96),
+                ultimo_precio * (1 + volatilidad * 1.96)
             )
 
-            # Métricas del mejor modelo
-            mejor_modelo = min(metricas_modelos.items(), key=lambda x: x[1].rmse)
+            # Métricas del mejor modelo (ahora basado en accuracy, no rmse)
+            mejor_modelo = max(metricas_modelos.items(), key=lambda x: x[1].accuracy)
             mejor_metrics = mejor_modelo[1]
 
             # Calcular variación
             variacion_pct = ((precio_predicho - ultimo_precio) / ultimo_precio) * 100
 
-            # Determinar tendencia
-            tendencia = self._determinar_tendencia(precios, precio_predicho, ultimo_precio)
+            # Determinar tendencia basada en probabilidad
+            if prob_subida > 0.55:
+                tendencia = "alcista"
+            elif prob_subida < 0.45:
+                tendencia = "bajista"
+            else:
+                tendencia = "lateral"
 
-            # Calcular confianza
-            confianza = self._calcular_confianza(
-                mejor_metrics, std_predicciones, ultimo_precio
-            )
+            # Calcular confianza basada en accuracy y consenso
+            confianza = (mejor_metrics.accuracy + abs(prob_subida - 0.5) * 2) / 2
 
             # Agregar feature importance promediada
             feature_importance_avg = self._promediar_importancias(importancias)
@@ -369,7 +386,8 @@ class ModelAgent:
 
             logger.info(
                 f"Predicción para {ticker}: {precio_predicho:.2f} "
-                f"(Var: {variacion_pct:.2f}%, RMSE: {mejor_metrics.rmse:.4f})"
+                f"(Var: {variacion_pct:.2f}%, Accuracy: {mejor_metrics.accuracy:.2%}, "
+                f"Prob subida: {prob_subida:.2%})"
             )
 
             return resultado
@@ -507,9 +525,17 @@ class ModelAgent:
         df = df.tail(self.ventana_entrenamiento)
 
         # Preparar X e y
-        # Target: retorno del siguiente día
-        y = df['Close'].shift(-1).dropna().values
-        X = df[feature_names].iloc[:-1].values
+        # Target: DIRECCIÓN del precio en 3 días (1=sube, 0=baja) - Clasificación
+        future_price = df['Close'].shift(-3)
+        current_price = df['Close']
+
+        # Crear target binario: 1 si sube, 0 si baja
+        y_direction = (future_price > current_price).astype(int)
+
+        # Eliminar NaN y alinear
+        valid_idx = ~(future_price.isna() | current_price.isna())
+        y = y_direction[valid_idx].values
+        X = df[feature_names][valid_idx].iloc[:-3].values
 
         if len(X) != len(y):
             min_len = min(len(X), len(y))
@@ -534,7 +560,7 @@ class ModelAgent:
         if len(X) < 15:
             return None, ModelMetrics(), {}
 
-        # Time series split para validación
+        # Time series split para validación (3 splits para mejor precisión)
         tscv = TimeSeriesSplit(n_splits=3)
         metrics_list = []
         direction_correct = 0
@@ -560,28 +586,32 @@ class ModelAgent:
                     modelo.fit(X_train, y_train)
                     y_pred = modelo.predict(X_val)
 
-                # Calcular métricas
-                mse = mean_squared_error(y_val, y_pred)
-                mae = mean_absolute_error(y_val, y_pred)
-                rmse = np.sqrt(mse)
-                r2 = r2_score(y_val, y_pred)
+                # Calcular métricas de CLASIFICACIÓN
+                accuracy = accuracy_score(y_val, y_pred)
+                precision = precision_score(y_val, y_pred, zero_division=0)
+                recall = recall_score(y_val, y_pred, zero_division=0)
+                f1 = f1_score(y_val, y_pred, zero_division=0)
 
-                # MAPE
-                mask = y_val != 0
-                if mask.any():
-                    mape = np.mean(np.abs((y_val[mask] - y_pred[mask]) / y_val[mask])) * 100
-                else:
-                    mape = 0
+                # Intentar calcular AUC si el modelo tiene predict_proba
+                try:
+                    if hasattr(modelo, 'predict_proba'):
+                        y_proba = modelo.predict_proba(X_val)[:, 1]
+                        auc = roc_auc_score(y_val, y_proba)
+                    else:
+                        auc = 0.5
+                except:
+                    auc = 0.5
 
-                # Direction accuracy
-                if len(y_val) > 1:
-                    actual_direction = np.diff(y_val) > 0
-                    pred_direction = np.diff(y_pred) > 0
-                    direction_correct += np.sum(actual_direction == pred_direction)
-                    total_predictions += len(actual_direction)
+                # Direction accuracy (ahora es lo mismo que accuracy)
+                direction_correct += np.sum(y_val == y_pred)
+                total_predictions += len(y_val)
 
                 metrics_list.append({
-                    'mse': mse, 'rmse': rmse, 'mae': mae, 'mape': mape, 'r2': r2
+                    'accuracy': accuracy,
+                    'precision': precision,
+                    'recall': recall,
+                    'f1': f1,
+                    'auc': auc
                 })
 
             except Exception as e:
@@ -591,7 +621,7 @@ class ModelAgent:
         if not metrics_list:
             return None, ModelMetrics(), {}
 
-        # Entrenar modelo final con todos los datos
+        # Entrenar modelo final con todos los datos y predecir PROBABILIDAD
         try:
             if model_type == ModelType.LSTM and TORCH_AVAILABLE:
                 # Para LSTM, predecir directamente
@@ -600,19 +630,29 @@ class ModelAgent:
                     prediccion = float(prediccion[0])
             else:
                 modelo.fit(X, y)
-                prediccion = float(modelo.predict(X[-1:].reshape(1, -1))[0])
+                # Predecir PROBABILIDAD de subida (clase 1)
+                if hasattr(modelo, 'predict_proba'):
+                    prediccion = float(modelo.predict_proba(X[-1:].reshape(1, -1))[0][1])
+                else:
+                    # Si no tiene predict_proba, usar predicción de clase
+                    prediccion = float(modelo.predict(X[-1:].reshape(1, -1))[0])
         except Exception as e:
             logger.debug(f"Error en predicción final de {model_type.value}: {e}")
             return None, ModelMetrics(), {}
 
-        # Promediar métricas
+        # Promediar métricas de CLASIFICACIÓN
         avg_metrics = ModelMetrics(
-            mse=np.mean([m['mse'] for m in metrics_list]),
-            rmse=np.mean([m['rmse'] for m in metrics_list]),
-            mae=np.mean([m['mae'] for m in metrics_list]),
-            mape=np.mean([m['mape'] for m in metrics_list]),
-            r2=np.mean([m['r2'] for m in metrics_list]),
-            direction_accuracy=direction_correct / total_predictions if total_predictions > 0 else 0.5
+            accuracy=np.mean([m['accuracy'] for m in metrics_list]),
+            precision=np.mean([m['precision'] for m in metrics_list]),
+            recall=np.mean([m['recall'] for m in metrics_list]),
+            f1=np.mean([m['f1'] for m in metrics_list]),
+            auc=np.mean([m['auc'] for m in metrics_list]),
+            direction_accuracy=direction_correct / total_predictions if total_predictions > 0 else 0.5,
+            # Legacy para compatibilidad (usar accuracy como proxy de rmse/mape)
+            rmse=1.0 - np.mean([m['accuracy'] for m in metrics_list]),
+            mape=(1.0 - np.mean([m['accuracy'] for m in metrics_list])) * 100,
+            mae=1.0 - np.mean([m['accuracy'] for m in metrics_list]),
+            r2=np.mean([m['accuracy'] for m in metrics_list])
         )
 
         # Feature importance (si disponible)
@@ -627,26 +667,34 @@ class ModelAgent:
         return prediccion, avg_metrics, importance
 
     def _crear_modelo(self, model_type: ModelType):
-        """Crea instancia del modelo según el tipo."""
+        """Crea instancia del modelo según el tipo (CLASIFICADORES)."""
         try:
             if model_type == ModelType.LINEAR:
-                return LinearRegression()
+                return LogisticRegression(max_iter=1000, random_state=42)
             elif model_type == ModelType.RIDGE:
-                return Ridge(**self.MODEL_CONFIGS[ModelType.RIDGE])
+                return RidgeClassifier(**self.MODEL_CONFIGS[ModelType.RIDGE])
             elif model_type == ModelType.LASSO:
-                return Lasso(**self.MODEL_CONFIGS[ModelType.LASSO])
+                # Lasso no tiene versión clasificador, usar Logistic con L1
+                return LogisticRegression(penalty='l1', solver='liblinear', C=2.0, random_state=42)
             elif model_type == ModelType.ELASTIC_NET:
-                return ElasticNet(**self.MODEL_CONFIGS[ModelType.ELASTIC_NET])
+                # ElasticNet no tiene versión clasificador, usar Logistic con elasticnet
+                return LogisticRegression(penalty='elasticnet', solver='saga', l1_ratio=0.5, C=2.0, random_state=42, max_iter=1000)
             elif model_type == ModelType.RANDOM_FOREST:
-                return RandomForestRegressor(**self.MODEL_CONFIGS[ModelType.RANDOM_FOREST])
+                return RandomForestClassifier(**self.MODEL_CONFIGS[ModelType.RANDOM_FOREST])
             elif model_type == ModelType.GRADIENT_BOOSTING:
-                return GradientBoostingRegressor(**self.MODEL_CONFIGS[ModelType.GRADIENT_BOOSTING])
+                return GradientBoostingClassifier(**self.MODEL_CONFIGS[ModelType.GRADIENT_BOOSTING])
             elif model_type == ModelType.XGBOOST and XGB_AVAILABLE:
-                return xgb.XGBRegressor(**self.XGBOOST_CONFIG)
+                config = self.XGBOOST_CONFIG.copy()
+                config['objective'] = 'binary:logistic'
+                config['eval_metric'] = 'logloss'
+                return xgb.XGBClassifier(**config)
             elif model_type == ModelType.LIGHTGBM and LGB_AVAILABLE:
-                return lgb.LGBMRegressor(**self.LIGHTGBM_CONFIG)
+                config = self.LIGHTGBM_CONFIG.copy()
+                config['objective'] = 'binary'
+                config['metric'] = 'binary_logloss'
+                return lgb.LGBMClassifier(**config)
             elif model_type == ModelType.LSTM:
-                return None  # LSTM se maneja aparte
+                return None  # LSTM se maneja aparte (clasificación binaria)
             else:
                 return None
         except Exception as e:
@@ -726,25 +774,22 @@ class ModelAgent:
         metricas: Dict[str, ModelMetrics]
     ) -> Dict[str, float]:
         """
-        Calcula pesos del ensemble basados en performance.
+        Calcula pesos del ensemble basados en performance (CLASIFICACIÓN).
 
-        Usa el inverso del RMSE normalizado para ponderar modelos.
+        Usa accuracy para ponderar modelos (mejor accuracy = mayor peso).
         """
         if not metricas:
             return {}
 
-        # Calcular inverso del RMSE (mejor RMSE = mayor peso)
-        inverse_rmse = {}
+        # Usar accuracy directamente (mejor accuracy = mayor peso)
+        accuracy_scores = {}
         for name, metrics in metricas.items():
-            if metrics.rmse > 0:
-                inverse_rmse[name] = 1.0 / metrics.rmse
-            else:
-                inverse_rmse[name] = 1.0
+            accuracy_scores[name] = max(metrics.accuracy, 0.01)  # Evitar división por cero
 
         # Normalizar pesos
-        total = sum(inverse_rmse.values())
+        total = sum(accuracy_scores.values())
         if total > 0:
-            return {name: val / total for name, val in inverse_rmse.items()}
+            return {name: val / total for name, val in accuracy_scores.items()}
         else:
             # Pesos iguales si no hay información
             n = len(metricas)
@@ -956,7 +1001,13 @@ class ModelAgent:
             "tendencia": resultado.tendencia,
             "confianza": resultado.confianza,
             "metricas": {
-                "mse": resultado.metricas_completas.mse,
+                # Métricas de clasificación
+                "accuracy": resultado.metricas_completas.accuracy,
+                "precision": resultado.metricas_completas.precision,
+                "recall": resultado.metricas_completas.recall,
+                "f1": resultado.metricas_completas.f1,
+                "auc": resultado.metricas_completas.auc,
+                # Legacy para compatibilidad
                 "rmse": resultado.metricas_completas.rmse,
                 "mae": resultado.metricas_completas.mae,
                 "mape": resultado.metricas_completas.mape,

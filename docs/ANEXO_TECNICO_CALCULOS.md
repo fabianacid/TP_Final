@@ -378,18 +378,19 @@ Score final = (0.125 × 0.40) + (1.0 × 0.35) + (0.5 × 0.25)
 
 ## 2. AGENTE DE MODELO PREDICTIVO (ModelAgent)
 
-### 2.1 Arquitectura del Ensemble
+### 2.1 Arquitectura del Ensemble - Clasificación Binaria
 
-**Modelos utilizados** (9 modelos en total):
-1. Linear Regression (regresión lineal básica)
-2. Ridge Regression (regresión con regularización L2)
-3. Lasso Regression (regresión con regularización L1)
-4. ElasticNet Regression (combinación L1 + L2)
-5. Random Forest Regressor (ensemble de árboles)
-6. Gradient Boosting Regressor (boosting gradual)
-7. XGBoost Regressor (gradient boosting optimizado)
-8. LightGBM Regressor (gradient boosting eficiente)
-9. LSTM Neural Network (red neuronal recurrente, si PyTorch disponible)
+**Objetivo**: Predecir la dirección del precio (SUBIDA o BAJADA) a 3 días, no el precio exacto.
+
+**Modelos utilizados** (4 modelos de clasificación):
+1. Random Forest Classifier (ensemble de árboles de decisión)
+2. Gradient Boosting Classifier (boosting gradual para clasificación)
+3. XGBoost Classifier (gradient boosting optimizado)
+4. LightGBM Classifier (gradient boosting eficiente)
+
+**Ventana de entrenamiento**: 252 días (1 año completo)
+**Horizonte de predicción**: 3 días
+**Validación**: Time Series Split con 3 folds
 
 ### 2.2 Features (Variables de Entrada)
 
@@ -493,26 +494,44 @@ features_patrones = [
 
 **Total**: 50+ features
 
-### 2.3 Target (Variable Objetivo)
+### 2.3 Target (Variable Objetivo) - Clasificación Binaria
 
+**Fórmula del target**:
 ```
-y = Precio_cierre(día siguiente)
+precio_futuro = Close[t+3]   # Precio dentro de 3 días
+precio_actual = Close[t]      # Precio hoy
+
+# Clasificación binaria
+y = 1  si precio_futuro > precio_actual  (SUBIDA)
+y = 0  si precio_futuro ≤ precio_actual  (BAJADA)
+```
+
+**Ejemplo práctico**:
+```
+Día t: Close = $150.00
+Día t+3: Close = $152.50
+
+precio_futuro ($152.50) > precio_actual ($150.00)
+→ y = 1 (SUBIDA)
 ```
 
 ### 2.4 División de Datos
 
 ```
-Total datos: últimos 6 meses (≈126 días de trading)
+Total datos: 252 días de trading (1 año completo)
 
-Train set: primeros 80% (≈100 días)
-Test set: últimos 20% (≈26 días)
+Validación: Time Series Split con 3 folds
 
-Validación: Time Series Cross-Validation con 3 folds
+Fold 1: Train[0:168]  → Test[168:210]  (168 días train, 42 días test)
+Fold 2: Train[0:210]  → Test[210:252]  (210 días train, 42 días test)
+Fold 3: Train[0:231]  → Test[231:252]  (231 días train, 21 días test)
+
+Promedio final: métricas de los 3 folds
 ```
 
-### 2.5 Configuración de Modelos
+### 2.5 Configuración de Modelos de Clasificación
 
-#### 2.5.1 Random Forest
+#### 2.5.1 Random Forest Classifier
 
 ```python
 Hiperparámetros:
@@ -521,15 +540,17 @@ Hiperparámetros:
 - min_samples_split = 5
 - min_samples_leaf = 2
 - max_features = 'sqrt'
+- class_weight = 'balanced'  # Balancea clases
 - random_state = 42
 ```
 
 **Funcionamiento**:
 - Crea 100 árboles de decisión
-- Cada árbol vota por una predicción
-- Predicción final = promedio de todos los árboles
+- Cada árbol vota por una clase (0 o 1)
+- Predicción final = clase con más votos
+- Output: probabilidad P(SUBIDA)
 
-#### 2.5.2 XGBoost
+#### 2.5.2 XGBoost Classifier
 
 ```python
 Hiperparámetros:
@@ -538,23 +559,25 @@ Hiperparámetros:
 - learning_rate = 0.1
 - subsample = 0.8
 - colsample_bytree = 0.8
-- objective = 'reg:squarederror'
+- objective = 'binary:logistic'  # Clasificación binaria
+- eval_metric = 'logloss'
 - random_state = 42
 ```
 
-**Algoritmo Gradient Boosting**:
+**Algoritmo Gradient Boosting para Clasificación**:
 ```
-F₀(x) = ȳ  (predicción inicial = media)
+F₀(x) = log(p/(1-p))  donde p = proporción de clase positiva
 
 Para m = 1 hasta M:
-    1. Calcular residuales: rᵢ = yᵢ - Fₘ₋₁(xᵢ)
-    2. Entrenar árbol hₘ(x) para predecir residuales
-    3. Actualizar: Fₘ(x) = Fₘ₋₁(x) + η × hₘ(x)
+    1. Calcular probabilidades: pᵢ = 1/(1 + e^(-Fₘ₋₁(xᵢ)))
+    2. Calcular pseudo-residuales: rᵢ = yᵢ - pᵢ
+    3. Entrenar árbol hₘ(x) para predecir residuales
+    4. Actualizar: Fₘ(x) = Fₘ₋₁(x) + η × hₘ(x)
 
-donde η = learning_rate = 0.1
+Predicción final: P(y=1|x) = 1/(1 + e^(-F_M(x)))
 ```
 
-#### 2.5.3 LightGBM
+#### 2.5.3 LightGBM Classifier
 
 ```python
 Hiperparámetros:
@@ -563,12 +586,14 @@ Hiperparámetros:
 - learning_rate = 0.1
 - num_leaves = 31
 - min_child_samples = 20
+- objective = 'binary'
+- metric = 'binary_logloss'
 - random_state = 42
 ```
 
-**Diferencia con XGBoost**: Construye árboles leaf-wise (más profundo) en vez de level-wise (más balanceado).
+**Diferencia con XGBoost**: Construye árboles leaf-wise (más profundo) en vez de level-wise (más balanceado). Suele ser más rápido y eficiente en memoria.
 
-#### 2.5.4 Gradient Boosting
+#### 2.5.4 Gradient Boosting Classifier
 
 ```python
 Hiperparámetros:
@@ -576,261 +601,285 @@ Hiperparámetros:
 - max_depth = 5
 - learning_rate = 0.1
 - subsample = 0.8
+- loss = 'log_loss'  # Para clasificación binaria
 - min_samples_split = 5
 - random_state = 42
 ```
 
-#### 2.5.5 Ridge Regression
-
-```python
-Hiperparámetros:
-- alpha = 1.0  (regularización L2)
-- max_iter = 1000
-```
-
-**Fórmula**:
-```
-min ||y - Xβ||² + α||β||²
-
-donde:
-- y = precios objetivo
-- X = matriz de features
-- β = coeficientes a optimizar
-- α = parámetro de regularización
-```
-
 ### 2.6 Predicción del Ensemble
 
-**Método: Promedio Ponderado por Rendimiento Inverso**
+**Método: Promedio Ponderado por Accuracy**
 
 ```python
 Paso 1: Entrenar cada modelo con validación cruzada
-for modelo in [RF, XGB, LGBM, GB, Ridge]:
+for modelo in [RF, GBM, XGB, LGBM]:
     for fold in time_series_cv(n_splits=3):
         modelo.fit(X_train_fold, y_train_fold)
-        pred = modelo.predict(X_val_fold)
-        calcular métricas (RMSE, MAE, MAPE, R²)
+        pred_proba = modelo.predict_proba(X_val_fold)[:, 1]
+        pred_class = (pred_proba > 0.5).astype(int)
+        calcular métricas (Accuracy, Precision, Recall, F1, AUC)
 
-Paso 2: Calcular RMSE promedio de cada modelo
-rmse_rf = promedio(rmse_folds_rf)
-rmse_xgb = promedio(rmse_folds_xgb)
-...
+Paso 2: Calcular Accuracy promedio de cada modelo
+accuracy_rf = promedio(accuracy_folds_rf)
+accuracy_gbm = promedio(accuracy_folds_gbm)
+accuracy_xgb = promedio(accuracy_folds_xgb)
+accuracy_lgbm = promedio(accuracy_folds_lgbm)
 
-Paso 3: Convertir RMSE a pesos (mejor modelo = mayor peso)
-peso_i = (1 / rmse_i) / Σ(1 / rmse_j)
+Paso 3: Calcular pesos basados en Accuracy
+peso_i = accuracy_i / Σ(accuracy_j)
 
 Paso 4: Entrenar modelos con todos los datos
-for modelo in modelos:
+for modelo in [RF, GBM, XGB, LGBM]:
     modelo.fit(X_completo, y_completo)
 
-Paso 5: Predicción final ponderada
-pred_rf = modelo_rf.predict(X_nuevo)
-pred_xgb = modelo_xgb.predict(X_nuevo)
-...
+Paso 5: Predicción final ponderada (probabilidades)
+prob_rf = modelo_rf.predict_proba(X_nuevo)[:, 1]
+prob_gbm = modelo_gbm.predict_proba(X_nuevo)[:, 1]
+prob_xgb = modelo_xgb.predict_proba(X_nuevo)[:, 1]
+prob_lgbm = modelo_lgbm.predict_proba(X_nuevo)[:, 1]
 
-predicción_final = Σ(peso_i × pred_i)
+prob_ensemble = Σ(peso_i × prob_i)
 ```
 
 **Ejemplo numérico**:
 ```
 VALIDACIÓN CRUZADA:
-Modelo          Fold1   Fold2   Fold3   RMSE_avg
-Random Forest   5.20    5.10    5.30    5.20
-XGBoost         4.80    4.90    4.70    4.80
-LightGBM        4.95    5.00    4.90    4.95
-Gradient Boost  5.10    5.20    5.00    5.10
-Ridge           9.50    9.60    9.40    9.50
+Modelo           Fold1   Fold2   Fold3   Accuracy_avg
+Random Forest    0.64    0.66    0.65    0.650
+Gradient Boost   0.63    0.64    0.64    0.637
+XGBoost          0.66    0.67    0.66    0.663
+LightGBM         0.67    0.68    0.68    0.677  ← Mejor
 
 CÁLCULO DE PESOS:
-Modelo          RMSE    1/RMSE   Peso (normalizado)
-Random Forest   5.20    0.192    0.23 (23%)
-XGBoost         4.80    0.208    0.25 (25%) ← Mejor
-LightGBM        4.95    0.202    0.24 (24%)
-Gradient Boost  5.10    0.196    0.23 (23%)
-Ridge           9.50    0.105    0.13 (13%)  ← Peor
-                        ------   ----
-Total                   0.903    1.00
+Modelo           Accuracy  Peso (normalizado)
+Random Forest    0.650     0.2423 (24.23%)
+Gradient Boost   0.637     0.2338 (23.38%)
+XGBoost          0.663     0.2535 (25.35%)
+LightGBM         0.677     0.2704 (27.04%) ← Mayor peso
+                           ------
+Total            2.627     1.0000
 
-PREDICCIÓN PARA MAÑANA:
-RF:    $152.30
-XGB:   $153.10  ← Peso mayor
-LGBM:  $152.80
-GB:    $152.50
-Ridge: $151.00  ← Peso menor
+PREDICCIÓN PARA DÍA t+3:
+Probabilidades de SUBIDA:
+RF:    0.88  (88%)
+GBM:   1.00  (100%)
+XGB:   0.92  (92%)
+LGBM:  0.97  (97%)  ← Mayor peso
 
-Predicción_ensemble = (0.23×152.30) + (0.25×153.10) + (0.24×152.80) +
-                      (0.23×152.50) + (0.13×151.00)
-                    = 35.03 + 38.28 + 36.67 + 35.08 + 19.63
-                    = $152.69
+Prob_ensemble = (0.2423×0.88) + (0.2338×1.00) + (0.2535×0.92) + (0.2704×0.97)
+              = 0.2132 + 0.2338 + 0.2332 + 0.2623
+              = 0.9425 = 94.25%
+
+Interpretación: El ensemble predice SUBIDA con 94.25% de probabilidad
 ```
 
-### 2.7 Cálculo de Confianza
+### 2.7 Conversión de Probabilidad a Precio
 
-**Método basado en varianza de predicciones**:
+**Método basado en volatilidad histórica**:
 
 ```
-Paso 1: Obtener predicciones de cada modelo
-preds = [pred_rf, pred_xgb, pred_lgbm, pred_gb, pred_ridge]
+Paso 1: Obtener probabilidad del ensemble
+prob_subida = ensemble_predict_proba()
 
-Paso 2: Calcular varianza
-varianza = Σ(pred_i - pred_mean)² / n
+Paso 2: Calcular volatilidad histórica (20 días)
+returns = (Close[t] - Close[t-1]) / Close[t-1]
+volatilidad = std(returns_20d)
 
-Paso 3: Calcular confianza
-confianza_raw = 1 - (varianza / pred_mean)
+Paso 3: Estimar variación porcentual
+Si prob_subida > 0.5:  # Predice SUBIDA
+    variacion_pct = (prob_subida - 0.5) × 2 × volatilidad × 100
+Sino:  # Predice BAJADA
+    variacion_pct = (prob_subida - 0.5) × 2 × volatilidad × 100
 
-Paso 4: Ajustar por performance del mejor modelo
-mejor_r2 = max(r2_rf, r2_xgb, r2_lgbm, r2_gb, r2_ridge)
-factor_ajuste = sqrt(mejor_r2)
-
-confianza = confianza_raw × factor_ajuste
-
-Paso 5: Limitar rango
-Confianza_final ∈ [0.3, 0.95]
+Paso 4: Calcular precio predicho
+precio_predicho = precio_actual × (1 + variacion_pct/100)
 ```
 
-**Ejemplo**:
+**Ejemplo con SPY**:
 ```
-Predicciones: [152.30, 153.10, 152.80, 152.50, 151.00]
-Media = 152.34
+Precio actual: $682.15
+Probabilidad ensemble: 0.9425 (94.25% SUBIDA)
+Volatilidad histórica (20d): 0.015 (1.5%)
 
-Varianza = [(152.30-152.34)² + (153.10-152.34)² + (152.80-152.34)² +
-            (152.50-152.34)² + (151.00-152.34)²] / 5
-         = [0.0016 + 0.5776 + 0.2116 + 0.0256 + 1.7956] / 5
-         = 2.612 / 5 = 0.522
+Paso 1: prob_subida = 0.9425 > 0.5 → Predice SUBIDA
 
-Confianza_raw = 1 - (0.522 / 152.34) = 1 - 0.0034 = 0.9966
+Paso 2: variacion_pct = (0.9425 - 0.5) × 2 × 1.5
+                       = 0.4425 × 3.0
+                       = +1.328%
 
-Mejor R² = 0.85 (XGBoost)
-factor_ajuste = sqrt(0.85) = 0.922
+Paso 3: precio_predicho = 682.15 × (1 + 0.01328)
+                        = 682.15 × 1.01328
+                        = $691.21
 
-Confianza = 0.9966 × 0.922 = 0.919
-
-Aplicar límite: min(0.919, 0.95) = 0.919
-
-Confianza_final = 91.9%
+Interpretación:
+- El modelo predice SUBIDA con 94% de confianza
+- Precio proyectado: $691.21 en 3 días
+- Ganancia esperada: +$9.06 (+1.33%)
 ```
 
-### 2.8 Métricas de Evaluación
-
-#### 2.8.1 RMSE (Root Mean Squared Error)
-
-**Fórmula**:
+**Ejemplo con predicción de BAJADA**:
 ```
-RMSE = √[Σ(yᵢ - ŷᵢ)² / n]
+Precio actual: $150.00
+Probabilidad ensemble: 0.30 (30% SUBIDA = 70% BAJADA)
+Volatilidad histórica: 0.02 (2%)
+
+Paso 1: prob_subida = 0.30 < 0.5 → Predice BAJADA
+
+Paso 2: variacion_pct = (0.30 - 0.5) × 2 × 2.0
+                       = -0.20 × 4.0
+                       = -0.80%
+
+Paso 3: precio_predicho = 150.00 × (1 - 0.008)
+                        = 150.00 × 0.992
+                        = $148.80
+
+Interpretación:
+- El modelo predice BAJADA con 70% de confianza
+- Precio proyectado: $148.80 en 3 días
+- Pérdida esperada: -$1.20 (-0.80%)
+```
+
+### 2.8 Métricas de Evaluación - Clasificación Binaria
+
+#### 2.8.1 Matriz de Confusión
+
+**Concepto**: Tabla que compara predicciones vs realidad.
+
+```
+                  Predicho
+               BAJADA  SUBIDA
+Real BAJADA      TN      FP
+     SUBIDA      FN      TP
 
 donde:
-- yᵢ = precio real
-- ŷᵢ = precio predicho
-- n = número de predicciones
+TP = True Positive (predijo SUBIDA, fue SUBIDA)
+TN = True Negative (predijo BAJADA, fue BAJADA)
+FP = False Positive (predijo SUBIDA, fue BAJADA)
+FN = False Negative (predijo BAJADA, fue SUBIDA)
 ```
-
-**Interpretación**: Error promedio en dólares
 
 **Ejemplo**:
 ```
-Precios reales:    [150, 152, 148, 155, 153]
-Precios predichos: [151, 153, 147, 154, 152]
-Errores:           [ -1,  -1,   1,   1,   1]
-Errores²:          [  1,   1,   1,   1,   1]
+             Predicho
+          BAJADA  SUBIDA
+Real
+BAJADA      40      10
+SUBIDA      15      35
 
-RMSE = √(5 / 5) = √1 = $1.00
-
-Interpretación: En promedio, el modelo se equivoca ±$1.00
+TP = 35, TN = 40, FP = 10, FN = 15
+Total = 100 predicciones
 ```
 
-#### 2.8.2 MAE (Mean Absolute Error)
+#### 2.8.2 Accuracy (Exactitud)
 
 **Fórmula**:
 ```
-MAE = Σ|yᵢ - ŷᵢ| / n
+Accuracy = (TP + TN) / (TP + TN + FP + FN)
 ```
 
 **Ejemplo**:
 ```
-Usando datos anteriores:
-MAE = (1 + 1 + 1 + 1 + 1) / 5 = $1.00
-```
+Accuracy = (35 + 40) / (35 + 40 + 10 + 15)
+         = 75 / 100
+         = 0.75 = 75%
 
-**Ventaja sobre RMSE**: No penaliza tanto los errores grandes (no usa cuadrados).
-
-#### 2.8.3 MAPE (Mean Absolute Percentage Error)
-
-**Fórmula**:
-```
-MAPE = (100 / n) × Σ|yᵢ - ŷᵢ| / |yᵢ|
-```
-
-**Ejemplo**:
-```
-MAPE = (100/5) × (1/150 + 1/152 + 1/148 + 1/155 + 1/153)
-     = 20 × (0.0067 + 0.0066 + 0.0068 + 0.0065 + 0.0065)
-     = 20 × 0.0331
-     = 0.66%
-
-Interpretación: El modelo tiene un error promedio del 0.66%
-```
-
-**Ventaja**: Métrica en porcentaje, fácil de interpretar independiente del precio.
-
-#### 2.8.4 R² (Coeficiente de Determinación)
-
-**Fórmula**:
-```
-R² = 1 - (SS_res / SS_tot)
-
-donde:
-SS_res = Σ(yᵢ - ŷᵢ)²  (suma de cuadrados residuales)
-SS_tot = Σ(yᵢ - ȳ)²   (suma de cuadrados totales)
-ȳ = media de precios reales
-```
-
-**Ejemplo**:
-```
-Precios reales: [150, 152, 148, 155, 153]
-Media (ȳ) = 151.6
-
-Predichos: [151, 153, 147, 154, 152]
-
-SS_res = (150-151)² + (152-153)² + (148-147)² + (155-154)² + (153-152)²
-       = 1 + 1 + 1 + 1 + 1 = 5
-
-SS_tot = (150-151.6)² + (152-151.6)² + (148-151.6)² + (155-151.6)² + (153-151.6)²
-       = 2.56 + 0.16 + 12.96 + 11.56 + 1.96 = 29.2
-
-R² = 1 - (5 / 29.2) = 1 - 0.171 = 0.829
-
-Interpretación: El modelo explica el 82.9% de la variabilidad de los precios
+Interpretación: El modelo acierta la dirección en el 75% de los casos
 ```
 
 **Interpretación**:
-- R² = 1.0: Predicción perfecta
-- R² = 0.9: Excelente (90% de variabilidad explicada)
-- R² = 0.7-0.8: Bueno
-- R² = 0.5: Moderado
-- R² < 0.3: Modelo poco predictivo
-- R² < 0: Modelo peor que predecir la media
+- Accuracy > 70%: Excelente para predicción de mercados
+- Accuracy 60-70%: Bueno
+- Accuracy 50-60%: Moderado
+- Accuracy ≈ 50%: Equivalente a lanzar una moneda
 
-#### 2.8.5 Direction Accuracy
+#### 2.8.3 Precision (Precisión)
 
 **Fórmula**:
 ```
-Dirección_real = sign(Precio_t+1 - Precio_t)
-Dirección_predicha = sign(Predicción_t+1 - Precio_t)
-
-Accuracy = Σ(Dirección_real == Dirección_predicha) / n × 100%
+Precision = TP / (TP + FP)
 ```
 
 **Ejemplo**:
 ```
-Día  Real  Pred  Dir_Real  Dir_Pred  Correcto?
-1    150   151    ↑         ↑         ✓
-2    152   153    ↑         ↑         ✓
-3    148   147    ↓         ↓         ✓
-4    155   154    ↑         ↑         ✓
-5    153   152    ↓         ↓         ✓
+Precision = 35 / (35 + 10)
+          = 35 / 45
+          = 0.778 = 77.8%
 
-Direction Accuracy = 5/5 = 100%
+Interpretación: Cuando predice SUBIDA, acierta el 77.8% de las veces
 ```
+
+**¿Cuándo importa?**: Cuando el costo de un falso positivo es alto (comprar y que baje).
+
+#### 2.8.4 Recall / Sensitivity (Sensibilidad)
+
+**Fórmula**:
+```
+Recall = TP / (TP + FN)
+```
+
+**Ejemplo**:
+```
+Recall = 35 / (35 + 15)
+       = 35 / 50
+       = 0.70 = 70%
+
+Interpretación: Detecta el 70% de las subidas reales
+```
+
+**¿Cuándo importa?**: Cuando no quieres perder oportunidades (capturar todas las subidas).
+
+#### 2.8.5 F1-Score
+
+**Fórmula**:
+```
+F1 = 2 × (Precision × Recall) / (Precision + Recall)
+```
+
+**Ejemplo**:
+```
+F1 = 2 × (0.778 × 0.70) / (0.778 + 0.70)
+   = 2 × 0.5446 / 1.478
+   = 1.0892 / 1.478
+   = 0.737 = 73.7%
+
+Interpretación: Balance óptimo entre precision y recall
+```
+
+**¿Cuándo usarlo?**: Métrica general cuando precision y recall son igualmente importantes.
+
+#### 2.8.6 AUC-ROC (Area Under Curve)
+
+**Concepto**: Área bajo la curva ROC (True Positive Rate vs False Positive Rate).
+
+**Fórmula**:
+```
+TPR = TP / (TP + FN)  (Recall)
+FPR = FP / (FP + TN)
+
+AUC ∈ [0, 1]
+```
+
+**Interpretación**:
+- AUC = 1.0: Clasificador perfecto
+- AUC = 0.9-1.0: Excelente
+- AUC = 0.8-0.9: Muy bueno
+- AUC = 0.7-0.8: Bueno
+- AUC = 0.6-0.7: Moderado
+- AUC = 0.5: Aleatorio (sin valor predictivo)
+- AUC < 0.5: Peor que aleatorio
+
+**Ejemplo con SPY**:
+```
+Resultados del modelo:
+- Accuracy: 65.3%
+- Precision: 78.0%
+- Recall: 74.1%
+- F1-Score: 65.5%
+- AUC: 0.557
+
+Interpretación:
+El modelo predice correctamente la dirección en 2 de cada 3 casos.
+Cuando predice subida, acierta el 78% de las veces.
 
 **Importancia**: En trading, predecir la dirección correcta puede ser más valioso que predecir el precio exacto.
 
@@ -1888,11 +1937,12 @@ Usuario solicita análisis de TICKER
          ↓
 ┌────────────────────────────────────────┐
 │ 2. ModelAgent                          │
-│   - Construir features (30+ variables)│
-│   - Ejecutar 5 modelos ML             │
-│   - Ensemble ponderado por RMSE       │
-│   - Calcular métricas (RMSE, MAE,     │
-│     MAPE, R², Direction Accuracy)     │
+│   - Construir features (52 variables) │
+│   - Ejecutar 4 modelos clasificación  │
+│   - Ensemble ponderado por Accuracy   │
+│   - Calcular métricas (Accuracy,      │
+│     Precision, Recall, F1, AUC)       │
+│   - Convertir probabilidad a precio   │
 │   Output: prediction                  │
 └────────────────────────────────────────┘
          ↓
@@ -1971,38 +2021,40 @@ Señal técnica: "neutral" (score = 0.05)
 
 **PASO 2 - ModelAgent**:
 ```
-Features construidos: 30+ variables × 125 samples
+Features construidos: 52 variables × 252 samples (1 año)
 
 Validación cruzada (3 folds):
-Modelo           RMSE_avg
-Random Forest    $13.50
-XGBoost          $12.80  ← Mejor
-LightGBM         $13.10
-Gradient Boost   $13.25
-Ridge            $18.90
+Modelo           Accuracy_avg
+Random Forest    0.650 (65.0%)
+Gradient Boost   0.637 (63.7%)
+XGBoost          0.663 (66.3%)
+LightGBM         0.677 (67.7%)  ← Mejor
 
 Pesos calculados:
-- XGB: 24% (mejor modelo)
-- LGBM: 23%
-- RF: 22%
+- LGBM: 27% (mejor modelo)
+- XGB: 25%
+- RF: 24%
 - GB: 23%
-- Ridge: 8%
 
-Predicciones individuales:
-- RF: $408.20
-- XGB: $409.10
-- LGBM: $408.50
-- GB: $408.30
-- Ridge: $405.80
+Probabilidades individuales (SUBIDA):
+- RF: 0.85 (85%)
+- GBM: 0.92 (92%)
+- XGB: 0.88 (88%)
+- LGBM: 0.90 (90%)
 
-Predicción ensemble: $408.45
-Variación: +2.83%
-Confianza: 54%
-RMSE: $13.10
-MAE: $10.52
-MAPE: 2.65%
-R²: 0.78
-Direction Accuracy: 62%
+Probabilidad ensemble: 0.887 (88.7% SUBIDA)
+Precio actual: $397.20
+Volatilidad histórica: 1.8%
+Variación estimada: +2.83%
+Precio predicho: $408.45
+Confianza: 67.7%
+
+Métricas del modelo:
+- Accuracy: 67.7%
+- Precision: 78.5%
+- Recall: 71.2%
+- F1-Score: 67.8%
+- AUC: 0.582
 ```
 
 **PASO 3 - SentimentAgent**:
@@ -2125,26 +2177,30 @@ Output: { tiene_alerta: false }
   "prediccion": {
     "precio_predicho": 408.45,
     "variacion_pct": 2.83,
-    "confianza": 0.54,
+    "modelo": "ensemble_classification",
     "metricas": {
-      "rmse": 13.10,
-      "mae": 10.52,
-      "mape": 2.65,
-      "r2": 0.78,
-      "direction_accuracy": 0.62
+      "accuracy": 0.677,
+      "precision": 0.785,
+      "recall": 0.712,
+      "f1": 0.678,
+      "auc": 0.582,
+      "rmse": 0.323,
+      "mape": 32.3,
+      "mae": 0.323,
+      "r2": 0.677
     },
     "modelos_detalle": {
       "predicciones": {
-        "random_forest": 408.20,
-        "xgboost": 409.10,
-        "lightgbm": 408.50,
-        "gradient_boosting": 408.30,
-        "ridge": 405.80
+        "random_forest": 0.85,
+        "gradient_boosting": 0.92,
+        "xgboost": 0.88,
+        "lightgbm": 0.90
       },
       "pesos": {
-        "random_forest": 0.22,
-        "xgboost": 0.24,
-        "lightgbm": 0.23,
+        "random_forest": 0.2423,
+        "gradient_boosting": 0.2338,
+        "xgboost": 0.2535,
+        "lightgbm": 0.2704,
         "gradient_boosting": 0.23,
         "ridge": 0.08
       },

@@ -2,7 +2,7 @@
 
 Este documento proporciona ejemplos prácticos de cómo usar el Sistema Multiagente de Seguimiento Financiero.
 
-## 📑 Contenidos
+##  Contenidos
 
 - [Uso Básico desde Dashboard](#uso-básico-desde-dashboard)
 - [Uso de la API con cURL](#uso-de-la-api-con-curl)
@@ -36,16 +36,16 @@ Este documento proporciona ejemplos prácticos de cómo usar el Sistema Multiage
 **Ejemplo: Analizar Apple (AAPL)**
 
 1. En el campo de búsqueda, ingresa: `AAPL`
-2. Click en el botón "Analizar 🔍"
+2. Click en el botón "Analizar "
 3. Espera 10-20 segundos mientras el sistema:
-   - Descarga datos históricos
-   - Calcula 20+ indicadores técnicos
-   - Entrena ensemble de 5+ modelos ML
-   - Analiza 7 noticias con NLP
+   - Descarga datos históricos (1 año)
+   - Calcula 35+ indicadores técnicos
+   - Entrena ensemble de 4 modelos de clasificación ML
+   - Analiza sentimiento con NLP
    - Genera recomendación multi-factor
 4. Revisa los resultados:
    - **Análisis Técnico**: Score 6.8/10, tendencia alcista
-   - **Predicción**: $188.75 (rango: $183.20 - $194.30)
+   - **Predicción**: SUBIDA del 1.8% a 3 días (Accuracy: 65.3%)
    - **Sentimiento**: Positivo (0.42)
    - **Recomendación**: COMPRA MODERADA (confianza: 82%)
 
@@ -54,7 +54,7 @@ Este documento proporciona ejemplos prácticos de cómo usar el Sistema Multiage
 **Ejemplo de resultado:**
 
 ```
-🟢 COMPRA MODERADA
+ COMPRA MODERADA
 Confianza: 82%
 
 Razón:
@@ -77,8 +77,8 @@ Position Sizing:
 - Risk/Reward: 2.5:1
 
 Riesgos:
-⚠️ Volatilidad moderada (ATR: 2.45)
-⚠️ Exposición al sector tecnológico
+ Volatilidad moderada (ATR: 2.45)
+ Exposición al sector tecnológico
 ```
 
 ### 5. Gestionar Alertas
@@ -86,7 +86,7 @@ Riesgos:
 1. Click en la pestaña "Alertas"
 2. Verás alertas como:
    ```
-   ⚠️ TSLA - Variación crítica (-7.8%)
+    TSLA - Variación crítica (-7.8%)
    Precio actual: $245.30
    Precio predicho: $265.50
    Hace 2 horas
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     analysis = client.analyze_ticker("AAPL")
 
     # Mostrar resultados
-    print(f"\n🔍 Análisis de {analysis['ticker']}")
+    print(f"\n Análisis de {analysis['ticker']}")
     print(f"Precio actual: ${analysis['market_data']['precio_actual']}")
     print(f"Precio predicho: ${analysis['prediction']['precio_predicho']}")
     print(f"Sentimiento: {analysis['sentiment']['categoria']} ({analysis['sentiment']['score']})")
@@ -527,7 +527,7 @@ def send_alert_email(alerts, to_email):
 
     body = "Alertas críticas detectadas:\n\n"
     for alert in alerts:
-        body += f"⚠️ {alert['ticker']}: {alert['mensaje']}\n"
+        body += f" {alert['ticker']}: {alert['mensaje']}\n"
         body += f"   Variación: {alert['variacion_pct']:.2f}%\n"
         body += f"   Precio: ${alert['precio_actual']}\n\n"
 
@@ -553,7 +553,7 @@ critical_alerts = [
 ]
 
 if critical_alerts:
-    print(f"⚠️  {len(critical_alerts)} alertas críticas encontradas")
+    print(f"  {len(critical_alerts)} alertas críticas encontradas")
     send_alert_email(critical_alerts, "investor@example.com")
     print("✅ Email enviado")
 
@@ -655,7 +655,7 @@ ALERTS=$(curl -s -X GET "http://localhost:8000/alerts" \
   | jq '.alertas | length')
 
 if [ "$ALERTS" -gt 0 ]; then
-  echo "⚠️  Tienes $ALERTS alertas nuevas"
+  echo "  Tienes $ALERTS alertas nuevas"
 fi
 ```
 
