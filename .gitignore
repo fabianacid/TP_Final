@@ -71,3 +71,7 @@ htmlcov/
 # *.joblib
 # *.h5
 # *.pt
+
+# Documentación de tesis
+test_results/CAPITULO_4_Y_5_TESIS.md
+test_results/INSTRUCCIONES_OVERLEAF.md
