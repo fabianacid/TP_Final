@@ -2309,6 +2309,6 @@ Output: { tiene_alerta: false }
 
 **Fin del Anexo Técnico**
 
-*Documento actualizado para reflejar la implementación real del sistema*
+
 *Versión: 2.0*
 *Fecha: Febrero 2026*
