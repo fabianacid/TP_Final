@@ -1,22 +1,21 @@
 """
-Agente de Modelo Profesional - Ensemble de ML para Predicción Financiera
+Agente de Modelo Profesional - Ensemble de ML para Clasificación de Dirección de Precios
 
-Implementación de nivel institucional para predicción de series temporales financieras.
+Implementación de nivel institucional para clasificación binaria de movimientos de precios.
 Utiliza un ensemble de modelos de machine learning con validación temporal rigurosa.
 
-Modelos implementados:
-- Linear Regression con regularización (Ridge, Lasso, ElasticNet)
-- XGBoost Regressor (Gradient Boosting optimizado)
-- LightGBM Regressor (Gradient Boosting eficiente)
-- Random Forest Regressor
-- LSTM Neural Network (si PyTorch disponible)
+Modelos implementados (Clasificación Binaria):
+- Random Forest Classifier
+- Gradient Boosting Classifier
+- XGBoost Classifier (con objective='binary:logistic')
+- LightGBM Classifier (con objective='binary')
 
 Arquitectura:
-- Feature engineering avanzado con 30+ features técnicas
-- Walk-forward validation para series temporales
-- Ensemble con ponderación dinámica por performance
-- Predicción con intervalos de confianza
-- Selección automática del mejor modelo
+- Feature engineering avanzado con 52 características técnicas
+- Walk-forward validation temporal con 3 splits
+- Ensemble con ponderación dinámica por performance (F1-Score)
+- Predicción de dirección (SUBIDA/BAJADA) a 3 días
+- Métricas de clasificación: Accuracy, Precision, Recall, F1-Score, AUC-ROC
 """
 import logging
 from datetime import datetime
@@ -73,19 +72,13 @@ class ModelType(Enum):
 
 @dataclass
 class ModelMetrics:
-    """Métricas completas de evaluación del modelo (CLASIFICACIÓN)."""
-    # Métricas de clasificación
-    accuracy: float = 0.0        # Precisión general
-    precision: float = 0.0       # Precisión de clase positiva
-    recall: float = 0.0          # Recall de clase positiva
-    f1: float = 0.0              # F1-score
-    auc: float = 0.5             # Area Under ROC Curve
-    # Métricas legacy para compatibilidad
-    rmse: float = 0.0
-    mape: float = 0.0
-    mae: float = 0.0
-    r2: float = 0.0
-    direction_accuracy: float = 0.0
+    """Métricas de evaluación para clasificación binaria de dirección de precios."""
+    # Métricas de clasificación binaria (SUBIDA vs BAJADA)
+    accuracy: float = 0.0        # Precisión general del clasificador
+    precision: float = 0.0       # Precisión de clase positiva (SUBIDA)
+    recall: float = 0.0          # Recall de clase positiva (SUBIDA)
+    f1: float = 0.0              # F1-score (balance precision-recall)
+    auc: float = 0.5             # Area Under ROC Curve (capacidad discriminativa)
 
 
 @dataclass
