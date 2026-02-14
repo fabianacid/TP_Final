@@ -160,7 +160,6 @@ async def predict_ticker(
             # Usar valores por defecto si falla la predicción
             precio_predicho = market_data.ultimo_precio
             variacion_pct = 0.0
-            rmse = mape = mae = r2 = 0.0
             accuracy = precision = recall = f1 = auc = 0.0
             parametros = {}
             modelos_usados = {}
@@ -168,11 +167,7 @@ async def predict_ticker(
         else:
             precio_predicho = prediction.precio_predicho
             variacion_pct = prediction.variacion_pct
-            rmse = prediction.rmse
-            mape = prediction.mape
-            mae = prediction.mae
-            r2 = prediction.metricas_completas.r2
-            # Métricas de clasificación
+            # Métricas de clasificación binaria
             accuracy = prediction.metricas_completas.accuracy
             precision = prediction.metricas_completas.precision
             recall = prediction.metricas_completas.recall
@@ -262,19 +257,15 @@ async def predict_ticker(
             prediccion={
                 "precio_predicho": precio_predicho,
                 "variacion_pct": variacion_pct,
+                "horizonte_dias": 3,
                 "modelo": "ensemble_classification",
                 "metricas": {
-                    # Métricas de clasificación
+                    # Métricas de clasificación binaria (SUBIDA vs BAJADA)
                     "accuracy": accuracy,
                     "precision": precision,
                     "recall": recall,
                     "f1": f1,
-                    "auc": auc,
-                    # Legacy para compatibilidad
-                    "rmse": rmse,
-                    "mape": mape,
-                    "mae": mae,
-                    "r2": r2
+                    "auc": auc
                 },
                 "parametros": parametros,
                 "modelos_detalle": modelos_usados

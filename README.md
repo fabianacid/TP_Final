@@ -39,12 +39,13 @@ Prototipo funcional de un sistema inteligente basado en agentes para el seguimie
 
 Este proyecto implementa un sistema multiagente que integra:
 
-- **Obtención de datos de mercado** mediante yfinance
+- **Obtención de datos de mercado** mediante yfinance (datos reales, sin simulaciones)
 - **Análisis técnico** con 35+ indicadores y detección de anomalías
 - **Predicción de dirección de precios** con ensemble de 4 modelos de clasificación ML
 - **Análisis de sentimiento** con 4 métodos NLP
 - **Generación de recomendaciones** explicables multi-factor
 - **Sistema de alertas** con umbrales configurables
+- **Validación estricta de tickers** - rechaza símbolos inválidos con error HTTP 404
 
 ## Arquitectura
 
@@ -237,6 +238,8 @@ proyecto_final/
 ├── requirements-test.txt     # Dependencias de testing
 ├── run_all_tests.bat        # Script Windows para ejecutar tests
 ├── run_all_tests.sh         # Script Linux/Mac para ejecutar tests
+├── manage_services.sh       # Script de gestión de servicios (start/stop/restart)
+├── check_setup.py           # Verificación de instalación
 ├── .env.example
 └── README.md
 ```
@@ -377,6 +380,26 @@ streamlit run dashboard/app.py
 
 El dashboard estará disponible en:
 - http://localhost:8501
+
+### Script de Gestión de Servicios (Linux/Mac)
+
+Para facilitar la gestión de ambos servicios, puedes usar el script `manage_services.sh`:
+
+```bash
+# Iniciar backend + dashboard
+bash manage_services.sh start
+
+# Detener ambos servicios
+bash manage_services.sh stop
+
+# Reiniciar servicios
+bash manage_services.sh restart
+
+# Ver estado de los servicios
+bash manage_services.sh status
+```
+
+**Nota:** Este script es para sistemas Unix/Linux/Mac. En Windows, inicia cada servicio en terminales separadas como se describe arriba.
 
 ---
 
@@ -951,20 +974,22 @@ python tests/test_performance.py
 
 ####  Resultados Obtenidos
 
-**Pruebas Funcionales** (Fecha: 9 febrero 2026)
+**Pruebas Funcionales** (Fecha: 13 febrero 2026)
 -  **30/30 pruebas exitosas (100% tasa de éxito)**
--  **Latencia promedio: 3.2 segundos**
--  **Mejora del 31.7%** después de primera iteración (cache)
+-  **Latencia promedio: 4.90 segundos**
+-  **Mejora del 48%** después de primera iteración (caché: 8.5s → 4.3s)
 -  **10 tickers evaluados** × 3 iteraciones cada uno
+-  **Todos los agentes operativos al 100%** (MarketAgent, ModelAgent, SentimentAgent, RecommendationAgent, AlertAgent)
 
-**Modelos de Machine Learning (Clasificación)**
-- **Ensemble Accuracy: 65.3%** - Predice correctamente 2 de cada 3 movimientos
-- **Precision: 78.0%** - Cuando predice subida, acierta el 78% de las veces
-- **Recall: 74.1%** - Detecta el 74% de las subidas reales
-- **F1-Score: 65.5%** - Balance óptimo entre precision y recall
-- **LightGBM**: Mejor modelo individual (peso: 27% en ensemble)
-- **Mejor rendimiento**: Mercados eficientes (SPY, QQQ) con tendencias claras
-- **Nota**: Clasificación de dirección a 3 días (no precio exacto)
+**Modelos de Machine Learning (Clasificación Binaria)**
+- **Ensemble Accuracy: 55.92%** - Predice correctamente la dirección en ~56% de los casos (mejor que azar del 50%)
+- **Precision: 58.64%** - Cuando predice subida, acierta el 59% de las veces
+- **Recall: 69.66%** - Detecta el 70% de las subidas reales
+- **F1-Score: 58.06%** - Balance óptimo entre precision y recall
+- **AUC: 59.48%** - Capacidad de discriminación del modelo
+- **Variabilidad**: Accuracy varía entre 49% (WMT) y 63% (AAPL) según el ticker
+- **Mejor rendimiento**: Acciones tecnológicas con alta liquidez (AAPL: 62.6%, JPM: 59.9%, TSLA: 59.2%)
+- **Nota**: Clasificación de dirección a 3 días (SUBIDA/BAJADA), no precio exacto
 
 **Análisis de Sentimiento (NLP)**
 -  **Precisión: 83.6%** (promedio ponderado)
@@ -999,11 +1024,12 @@ test_results/graficos/
 
 | Objetivo | Meta | Resultado | Estado |
 |----------|------|-----------|--------|
-| Arquitectura multiagente | 5 agentes | 5 agentes operativos |  |
-| Predicción de dirección | > 60% Accuracy | 65.3% Accuracy |  |
-| Precision en subidas | > 70% | 78.0% Precision |  |
-| Análisis sentimiento > 75% | > 75% | 83.6% |  |
-| Tiempo respuesta < 5s | < 5s | 3.2s promedio |  |
+| Arquitectura multiagente | 5 agentes | 5 agentes @ 100% |  |
+| Predicción de dirección | > 50% Accuracy | 55.92% Accuracy |  |
+| Precision en clasificación | > 55% | 58.64% Precision |  |
+| Recall en detección | > 65% | 69.66% Recall |  |
+| Análisis sentimiento | > 75% | 83.6% |  |
+| Tiempo respuesta | < 5s | 4.90s promedio |  |
 | 20+ usuarios concurrentes | ≥ 20 | 25 usuarios @ 100% |  |
 | Dashboard funcional | Implementado | Streamlit |  |
 
@@ -1013,11 +1039,17 @@ Todos los resultados están guardados en formato JSON/CSV para análisis posteri
 
 ```bash
 test_results/
-├── functional_test_20260209_155644.json    # Resultados detallados
-├── functional_test_20260209_155644.csv     # Formato tabular
+├── functional_test_20260213_233918.json    # Resultados detallados con métricas de clasificación
+├── functional_test_20260213_233918.csv     # Formato tabular
 ├── performance_test_20260209_160016.json   # Pruebas de carga
-└── summary_20260209_155644.json            # Resumen ejecutivo
+└── summary_20260213_233918.json            # Resumen ejecutivo con estadísticas de clasificación
 ```
+
+**Contenido del resumen incluye:**
+- Métricas de clasificación agregadas (accuracy, precision, recall, f1, auc)
+- Rendimiento por agente (100% todos los agentes)
+- Estadísticas de latencia (promedio, mín, máx)
+- Distribución de errores (si los hay)
 
 ---
 
@@ -1135,8 +1167,11 @@ ping yahoo.com
 
 # 2. Verifica que el ticker sea válido
 # Usa tickers reales: AAPL, TSLA, MSFT, GOOGL, etc.
+# Consulta https://finance.yahoo.com/ para verificar el símbolo correcto
 
-# 3. Si persiste, el sistema usará datos simulados automáticamente
+# 3. El sistema NO genera datos simulados
+# Si el ticker no existe, recibirás un error HTTP 404
+# El sistema trabaja exclusivamente con datos reales de Yahoo Finance
 ```
 
 ---

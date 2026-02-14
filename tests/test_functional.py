@@ -67,18 +67,50 @@ class SystemTester:
 
             if response.status_code == 200:
                 data = response.json()
+
+                # Extraer datos con nombres en español (API actualizada)
+                prediccion = data.get("prediccion", {})
+                metricas = prediccion.get("metricas", {})
+                sentimiento = data.get("sentimiento", {})
+                recomendacion = data.get("recomendacion", {})
+
                 result.update({
-                    "market_agent_ok": "market_data" in data,
-                    "model_agent_ok": "prediction" in data,
-                    "sentiment_agent_ok": "sentiment" in data,
-                    "recommendation_agent_ok": "recommendation" in data,
-                    "alert_agent_ok": "alertas_generadas" in data,
-                    "prediction_value": data.get("prediction", {}).get("precio_predicho"),
-                    "confidence": data.get("prediction", {}).get("confianza"),
-                    "sentiment_score": data.get("sentiment", {}).get("score"),
-                    "recommendation": data.get("recommendation", {}).get("accion"),
+                    # Validación de agentes (nombres en español)
+                    "market_agent_ok": "mercado" in data,
+                    "model_agent_ok": "prediccion" in data,
+                    "sentiment_agent_ok": "sentimiento" in data,
+                    "recommendation_agent_ok": "recomendacion" in data,
+                    "alert_agent_ok": "alerta" in data,
+
+                    # Datos de predicción
+                    "prediction_value": prediccion.get("precio_predicho"),
+                    "variacion_pct": prediccion.get("variacion_pct"),
+                    "modelo": prediccion.get("modelo"),
+
+                    # Métricas de CLASIFICACIÓN (nuevas)
+                    "accuracy": metricas.get("accuracy"),
+                    "precision": metricas.get("precision"),
+                    "recall": metricas.get("recall"),
+                    "f1_score": metricas.get("f1"),
+                    "auc": metricas.get("auc"),
+
+                    # Métricas legacy (compatibilidad)
+                    "rmse": metricas.get("rmse"),
+                    "mape": metricas.get("mape"),
+
+                    # Sentimiento y recomendación
+                    "sentiment_score": sentimiento.get("score"),
+                    "sentimiento": sentimiento.get("sentimiento"),
+                    "recommendation": recomendacion.get("recomendacion"),
+                    "recommendation_tipo": recomendacion.get("tipo"),
+                    "recommendation_confianza": recomendacion.get("confianza"),
                 })
-                print(f"  ✅ Éxito - Latencia: {latency:.2f}s")
+
+                # Mostrar métricas de clasificación si existen
+                if metricas.get("accuracy") is not None:
+                    print(f"  ✅ Éxito - Latencia: {latency:.2f}s | Accuracy: {metricas.get('accuracy', 0):.1%} | Precision: {metricas.get('precision', 0):.1%}")
+                else:
+                    print(f"  ✅ Éxito - Latencia: {latency:.2f}s")
             else:
                 print(f"  ❌ Error {response.status_code}")
                 result["error_message"] = response.text[:200]
@@ -204,6 +236,25 @@ class SystemTester:
                     }
             summary["agent_performance"] = agent_stats
 
+        # Métricas de clasificación (si existen)
+        metrics_cols = ["accuracy", "precision", "recall", "f1_score", "auc"]
+        available_metrics = [col for col in metrics_cols if col in df.columns]
+
+        if available_metrics:
+            successful_tests = df[df["success"]]
+            metrics_summary = {}
+            for metric in available_metrics:
+                values = successful_tests[metric].dropna()
+                if len(values) > 0:
+                    metrics_summary[metric] = {
+                        "promedio": round(values.mean(), 4),
+                        "min": round(values.min(), 4),
+                        "max": round(values.max(), 4),
+                        "std": round(values.std(), 4) if len(values) > 1 else 0
+                    }
+            if metrics_summary:
+                summary["metricas_clasificacion"] = metrics_summary
+
         # Errores más comunes
         errors = df[~df["success"]]
         if len(errors) > 0:
@@ -261,6 +312,14 @@ class SystemTester:
             print(f"{'-'*60}")
             for agent, stats in summary["agent_performance"].items():
                 print(f"{agent:<25} {stats['tests']:<10} {stats['success']:<10} {stats['rate']}%")
+
+        if "metricas_clasificacion" in summary:
+            print(f"\n🎯 Métricas de Clasificación del Modelo:")
+            print(f"{'Métrica':<15} {'Promedio':<12} {'Mín':<12} {'Máx':<12} {'Std':<12}")
+            print(f"{'-'*60}")
+            for metric, stats in summary["metricas_clasificacion"].items():
+                metric_name = metric.upper().replace("_", " ")
+                print(f"{metric_name:<15} {stats['promedio']:<12.2%} {stats['min']:<12.2%} {stats['max']:<12.2%} {stats['std']:<12.4f}")
 
         if "error_types" in summary:
             print(f"\n❌ Tipos de errores encontrados:")
