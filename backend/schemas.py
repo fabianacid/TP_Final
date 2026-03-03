@@ -84,6 +84,8 @@ class MarketDataResponse(BaseModel):
     media_movil_20: float
     senal: str  # "alcista", "bajista", "neutral"
     fecha_actualizacion: datetime
+    precios_recientes: List[float] = []
+    fechas_recientes: List[str] = []
 
 
 # ============================================================
