@@ -726,18 +726,20 @@ def render_alert_card(alerta: Dict):
 
 
 def render_price_chart(ticker: str, prediction_data: Dict):
-    """Renderiza gráfico de precios."""
+    """Renderiza gráfico de precios con datos históricos reales."""
     mercado = prediction_data['mercado']
     prediccion = prediction_data['prediccion']
 
-    import numpy as np
+    precios_historicos = mercado.get('precios_recientes', [])
+    fechas_historicas = mercado.get('fechas_recientes', [])
 
-    dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
-    base_price = mercado['ultimo_precio']
-
-    np.random.seed(42)
-    prices = [base_price * (1 + np.random.uniform(-0.02, 0.02)) for _ in range(29)]
-    prices.append(base_price)
+    if precios_historicos and fechas_historicas:
+        dates = pd.to_datetime(fechas_historicas)
+        prices = precios_historicos
+    else:
+        # Fallback: línea plana en precio actual si no hay datos
+        dates = pd.date_range(end=datetime.now(), periods=30, freq='B')
+        prices = [mercado['ultimo_precio']] * 30
 
     fig = go.Figure()
 

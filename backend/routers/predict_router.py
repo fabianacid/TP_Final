@@ -242,6 +242,14 @@ async def predict_ticker(
         # ========================================
         # Construir respuesta unificada
         # ========================================
+        # Extraer últimos 60 días de precios reales para el gráfico
+        df_tail = market_data.precios.tail(60)
+        precios_recientes = [round(float(p), 4) for p in df_tail['Close'].tolist()]
+        fechas_recientes = [
+            str(idx.date()) if hasattr(idx, 'date') else str(idx)
+            for idx in df_tail.index
+        ]
+
         response = PredictionResponse(
             ticker=ticker,
             fecha_analisis=datetime.now(),
@@ -252,7 +260,9 @@ async def predict_ticker(
                 variacion_diaria=market_data.variacion_diaria,
                 media_movil_20=market_data.media_movil_20,
                 senal=market_data.senal,
-                fecha_actualizacion=market_data.fecha_actualizacion
+                fecha_actualizacion=market_data.fecha_actualizacion,
+                precios_recientes=precios_recientes,
+                fechas_recientes=fechas_recientes
             ),
             prediccion={
                 "precio_predicho": precio_predicho,
