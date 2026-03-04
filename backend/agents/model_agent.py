@@ -26,7 +26,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression, RidgeClassifier
+from sklearn.linear_model import LogisticRegression, RidgeClassifier, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
@@ -79,6 +79,12 @@ class ModelMetrics:
     recall: float = 0.0          # Recall de clase positiva (SUBIDA)
     f1: float = 0.0              # F1-score (balance precision-recall)
     auc: float = 0.5             # Area Under ROC Curve (capacidad discriminativa)
+    # Métricas adicionales
+    direction_accuracy: float = 0.0  # Exactitud de dirección (porcentaje de aciertos)
+    rmse: float = 0.0                # Proxy de error (1 - accuracy)
+    mape: float = 0.0                # Proxy de error porcentual ((1 - accuracy) * 100)
+    mae: float = 0.0                 # Proxy de error absoluto (1 - accuracy)
+    r2: float = 0.0                  # Proxy de R² (accuracy como referencia)
 
 
 @dataclass
