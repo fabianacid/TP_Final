@@ -269,16 +269,16 @@ Recomendación: MANTENER (confianza: 30%)
 
 | Sentimiento | Cantidad | Porcentaje |
 |-------------|----------|------------|
-| Positivo | 18 | 60% |
-| Neutral | 9 | 30% |
+| Positivo | 15 | 50% |
+| Neutral | 12 | 40% |
 | Negativo | 3 | 10% |
 
 ### Distribución de Recomendaciones
 
 | Recomendación | Cantidad | Porcentaje |
 |---------------|----------|------------|
-| Mantener | 24 | 80% |
-| Compra | 3 | 10% |
+| Mantener | 21 | 70% |
+| Compra | 6 | 20% |
 | Venta | 3 | 10% |
 
 ### Correlación Sentimiento-Recomendación
