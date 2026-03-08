@@ -536,11 +536,10 @@ Promedio final: métricas de los 3 folds
 ```python
 Hiperparámetros:
 - n_estimators = 100
-- max_depth = 15
+- max_depth = 10
 - min_samples_split = 5
 - min_samples_leaf = 2
 - max_features = 'sqrt'
-- class_weight = 'balanced'  # Balancea clases
 - random_state = 42
 ```
 
@@ -870,16 +869,16 @@ AUC ∈ [0, 1]
 
 **Ejemplo con SPY**:
 ```
-Resultados del modelo:
-- Accuracy: 65.3%
-- Precision: 78.0%
-- Recall: 74.1%
-- F1-Score: 65.5%
-- AUC: 0.557
+Resultados del modelo (promedio 10 tickers, sesión 13/02/2026):
+- Accuracy: 55.9%
+- Precision: 58.6%
+- Recall: 69.7%
+- F1-Score: 58.1%
+- AUC: 0.595
 
 Interpretación:
-El modelo predice correctamente la dirección en 2 de cada 3 casos.
-Cuando predice subida, acierta el 78% de las veces.
+El modelo supera el umbral aleatorio del 50% en 9 de 10 tickers.
+Cuando predice subida, acierta el 58.6% de las veces en promedio.
 
 **Importancia**: En trading, predecir la dirección correcta puede ser más valioso que predecir el precio exacto.
 
@@ -1134,7 +1133,7 @@ Si solo hay 3 noticias:
 Ajuste_cantidad = min(3/10, 1.0) × 0.2 = 0.06
 Confianza = 0.5 + 0.06 + 0.276 = 0.836
 
-Confianza_final = 83.6%
+Confianza_final = 83.6%  # Valor ilustrativo del cálculo; las confianzas reales varían según ticker y sesión
 ```
 
 ---
