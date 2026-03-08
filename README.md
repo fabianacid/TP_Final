@@ -444,8 +444,8 @@ El dashboard de Streamlit proporciona una interfaz visual completa para interact
 -  Precio estimado basado en probabilidad y volatilidad
 -  **Métricas de clasificación**:
   ```
-  ✓ Accuracy: 65.3%    ✓ Precision: 78.0%
-  ✓ Recall: 74.1%      ✓ F1-Score: 65.5%
+  ✓ Accuracy: 55.9%    ✓ Precision: 58.6%
+  ✓ Recall: 69.7%      ✓ F1-Score: 58.1%
   ```
 -  Probabilidad de cada dirección por modelo individual
 -  Contribución de cada modelo en el ensemble (pesos)
@@ -702,15 +702,11 @@ password=SecurePass123!
     "horizonte_dias": 3,
     "modelo_usado": "ensemble_classification",
     "metricas": {
-      "accuracy": 0.653,
-      "precision": 0.780,
-      "recall": 0.741,
-      "f1": 0.655,
-      "auc": 0.557,
-      "rmse": 2.45,
-      "mape": 1.32,
-      "mae": 1.98,
-      "r2": 0.653
+      "accuracy": 0.559,
+      "precision": 0.586,
+      "recall": 0.697,
+      "f1": 0.581,
+      "auc": 0.595
     },
     "modelos_detalle": {
       "predicciones": {
@@ -992,10 +988,10 @@ python tests/test_performance.py
 - **Nota**: Clasificación de dirección a 3 días (SUBIDA/BAJADA), no precio exacto
 
 **Análisis de Sentimiento (NLP)**
--  **Precisión: 83.6%** (promedio ponderado)
--  **500 noticias** evaluadas manualmente
--  **Procesamiento: 45ms/noticia** (TextBlob + FinBERT híbrido)
--  **Correlación sentimiento-precio**: Significativa (p < 0.05) en acciones tech
+-  Ensemble de 4 modelos: FinBERT (40%), VADER (25%), Lexicón financiero (20%), TextBlob (15%)
+-  Fuente de noticias: Yahoo Finance (yfinance)
+-  Score de sentimiento consolidado entre -1 (negativo) y +1 (positivo)
+-  Sin dataset de validación etiquetado — evaluación cualitativa en sesiones de prueba
 
 **Pruebas de Rendimiento**
 -  **Zona óptima**: 1-25 usuarios concurrentes (100% éxito)
@@ -1004,20 +1000,15 @@ python tests/test_performance.py
 -  **Throughput máximo**: 1.56 req/s
 
 **Cuellos de Botella Identificados**
-1. **ModelAgent (49.4% del tiempo)**: LSTM y Prophet son lentos
-2. **MarketAgent (38.9% del tiempo)**: Dependencia de yfinance API
+1. **ModelAgent**: Entrenamiento del ensemble de clasificadores (RF, GB, XGB, LightGBM)
+2. **MarketAgent**: Descarga de datos históricos desde Yahoo Finance (dependencia de API externa)
 
 ####  Gráficos y Visualizaciones
 
-Los resultados incluyen 5 gráficos profesionales en formato PDF:
-
 ```bash
 test_results/graficos/
-├── grafico_rmse_mape.pdf              # Comparación de modelos ML
-├── grafico_ticker_performance.pdf     # Rendimiento por ticker
-├── grafico_matriz_confusion.pdf       # Análisis de sentimiento
-├── grafico_latencia_componentes.pdf   # Distribución de tiempo
-└── grafico_pruebas_carga.pdf          # Escalabilidad del sistema
+├── grafico_latencia_componentes.pdf   # Distribución de latencia por nivel de carga
+└── grafico_pruebas_carga.pdf          # Escalabilidad del sistema (1-50 usuarios)
 ```
 
 ####  Cumplimiento de Objetivos
@@ -1028,7 +1019,7 @@ test_results/graficos/
 | Predicción de dirección | > 50% Accuracy | 55.92% Accuracy |  |
 | Precision en clasificación | > 55% | 58.64% Precision |  |
 | Recall en detección | > 65% | 69.66% Recall |  |
-| Análisis sentimiento | > 75% | 83.6% |  |
+| Análisis sentimiento NLP | Ensemble 4 modelos | FinBERT+VADER+Lexicón+TextBlob |  |
 | Tiempo respuesta | < 5s | 4.90s promedio |  |
 | 20+ usuarios concurrentes | ≥ 20 | 25 usuarios @ 100% |  |
 | Dashboard funcional | Implementado | Streamlit |  |
@@ -1228,9 +1219,9 @@ uvicorn backend.main:app --reload
 - Los modelos de clasificación funcionan mejor con tickers estables y líquidos
 - Usa tickers de grandes empresas (AAPL, MSFT) en lugar de penny stocks
 - El modelo predice dirección (SUBIDA/BAJADA), no precio exacto
-- Accuracy del 65% es razonable para mercados eficientes como SPY
+- Accuracy del 55.9% supera el umbral aleatorio del 50% en 9 de 10 tickers
 - Evalúa las métricas (Accuracy, Precision, Recall) para entender el rendimiento
-- Una precision del 78% significa que cuando predice subida, acierta 4 de cada 5 veces
+- Una precision del 58.6% significa que cuando predice subida, acierta en más de la mitad de los casos
 
 ---
 
@@ -1312,16 +1303,13 @@ Si encuentras un problema no listado aquí:
 
 ## Extensiones Futuras
 
-1. **Sentimiento Real**: Integrar FinBERT para análisis de noticias financieras  (Implementado)
-2. **Modelos Avanzados**: Implementar LSTM, Prophet u otros modelos de series temporales  (Implementado)
-3. **Notificaciones**: Agregar WebSocket para alertas en tiempo real
-4. **Múltiples Bases**: Soporte para PostgreSQL/MySQL en producción
-5. **Cache Distribuido**: Redis para caché de datos de mercado
-6. **Backtesting**: Sistema de pruebas históricas de estrategias
-7. **Portfolio Tracking**: Seguimiento de cartera de inversiones
-8. **Risk Management Dashboard**: Panel detallado de gestión de riesgos
-9. **API Pública**: Endpoints públicos con rate limiting y API keys
-10. **Mobile App**: Aplicación móvil con notificaciones push
+1. **Notificaciones en tiempo real**: Agregar WebSocket para actualización de alertas sin recargar página
+2. **Alertas por email/mensajería**: Envío de alertas por correo electrónico, Telegram o SMS
+3. **Escalabilidad**: Migrar a PostgreSQL y agregar caché Redis para mayor concurrencia
+4. **Backtesting**: Sistema de pruebas históricas de estrategias
+5. **Explicabilidad**: SHAP values para explicar predicciones del ensemble
+6. **Despliegue**: Containerización con Docker y pipeline CI/CD
+7. **Expansión geográfica**: Soporte para mercados internacionales y análisis en español
 
 ---
 
