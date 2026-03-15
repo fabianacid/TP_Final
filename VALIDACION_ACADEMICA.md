@@ -106,23 +106,27 @@ Donde f es la función de clasificación aprendida y θ son los parámetros del 
 2. **Boosting:** Reduce sesgo (Gradient Boosting, XGBoost)
 3. **Stacking:** Combina predicciones con meta-modelo
 
-**Nuestro enfoque:** Ensemble heterogéneo con 4 modelos de clasificación:
+**Nuestro enfoque:** Ensemble heterogéneo con modelos base + opcionales:
 
 ```
-Ensemble = w₁·RF + w₂·GB + w₃·XGB + w₄·LGB
+Ensemble = Σ wᵢ · Mᵢ   ∀ Mᵢ ∈ modelos_activos
 ```
 
-**Donde:**
+**Modelos base (siempre presentes):**
+- LR: LogisticRegression (Linear)
+- RC: RidgeClassifier
 - RF: Random Forest Classifier
 - GB: Gradient Boosting Classifier
+
+**Modelos opcionales (según librerías instaladas):**
 - XGB: XGBoost Classifier
 - LGB: LightGBM Classifier
-- w_i: Pesos calculados dinámicamente por F1-Score
+- LSTM: Red neuronal recurrente
 
-**Ponderación dinámica:**
+**Ponderación dinámica por Accuracy:**
 
 ```python
-peso_i = (F1_i / Σ F1_j)  ∀ j ∈ {1,2,3,4}
+peso_i = accuracy_i / Σ accuracy_j   ∀ j ∈ modelos_activos
 ```
 
 **Fundamentación:** Zhou (2012) en "Ensemble Methods: Foundations and Algorithms" demuestra que ensembles heterogéneos superan a modelos individuales cuando:
@@ -134,7 +138,7 @@ peso_i = (F1_i / Σ F1_j)  ∀ j ∈ {1,2,3,4}
 
 | Criterio | Nuestro Sistema |
 |----------|-----------------|
-| Diversidad | 4 algoritmos diferentes (RF, GB, XGB, LGB) |
+| Diversidad | 4+ algoritmos diferentes (LR, RC, RF, GB + XGB/LGB/LSTM opcionales) |
 | Accuracy > 50% | Todos los modelos: 52-61% |
 | Correlación de errores | Baja (R² < 0.6 entre pares) |
 
@@ -149,9 +153,11 @@ peso_i = (F1_i / Σ F1_j)  ∀ j ∈ {1,2,3,4}
 **Implementación:**
 
 ```
-Split 1: Train[0:168]   → Test[168:210]
-Split 2: Train[0:189]   → Test[189:231]
-Split 3: Train[0:210]   → Test[210:252]
+Split 1: Train[0:101]   → Test[101:126]
+Split 2: Train[0:126]   → Test[126:151]
+Split 3: Train[0:151]   → Test[151:176]
+Split 4: Train[0:176]   → Test[176:201]
+Split 5: Train[0:201]   → Test[201:252]
 ```
 
 **Ventajas:**
@@ -331,7 +337,7 @@ Precision = TP / (TP + FP)
 
 **Nuestro resultado:** 60.7%
 
-**Interpretación:** Cuando el modelo predice SUBIDA, acierta el 59% de las veces. Importante para traders que quieren evitar falsos positivos (comprar cuando va a bajar).
+**Interpretación:** Cuando el modelo predice SUBIDA, acierta el 60.7% de las veces. Importante para traders que quieren evitar falsos positivos (comprar cuando va a bajar).
 
 #### 2.3.4 Recall (Sensitivity)
 ```
@@ -340,7 +346,7 @@ Recall = TP / (TP + FN)
 
 **Nuestro resultado:** 66.2%
 
-**Interpretación:** El modelo detecta el 70% de las subidas reales. Importante para no perder oportunidades alcistas.
+**Interpretación:** El modelo detecta el 66.2% de las subidas reales. Importante para no perder oportunidades alcistas.
 
 #### 2.3.5 F1-Score
 ```
@@ -581,7 +587,7 @@ Nuestro sistema:                    [====66.2%====]
 
 #### 6.2.1 Ventana Temporal Limitada
 
-**Limitación:** Datos históricos: 504 días (2 años).
+**Limitación:** Datos históricos: 252 días (1 año).
 
 **Consecuencia:**
 - No captura ciclos económicos completos
@@ -647,25 +653,19 @@ Return neto: +4.8%
 
 #### 7.1.2 Ensemble Heterogéneo con Ponderación Dinámica
 
-**Innovación:** Pesos calculados por F1-Score en lugar de accuracy o ponderación fija.
+**Innovación:** Pesos calculados dinámicamente por Accuracy en validación cruzada, en lugar de ponderación fija.
 
-**Justificación:** F1-Score considera tanto precision como recall, más apropiado para clasificación desbalanceada.
+**Justificación:** Modelos con mayor accuracy histórica en walk-forward reciben mayor influencia en la predicción final.
 
 **Algoritmo:**
 ```python
-def calcular_pesos_dinamicos(modelos, X_val, y_val):
-    pesos = []
-    for modelo in modelos:
-        y_pred = modelo.predict(X_val)
-        f1 = f1_score(y_val, y_pred)
-        pesos.append(f1)
-
-    # Normalizar
-    total = sum(pesos)
-    return [w/total for w in pesos]
+def calcular_pesos_dinamicos(metricas):
+    accuracy_scores = {name: max(m.accuracy, 0.01) for name, m in metricas.items()}
+    total = sum(accuracy_scores.values())
+    return {name: val / total for name, val in accuracy_scores.items()}
 ```
 
-**Resultados:** LightGBM obtiene mayor peso (27.04%) por mejor F1-Score.
+**Resultados:** Los modelos de gradient boosting (XGB, LGB cuando disponibles) suelen obtener mayor peso por mejor accuracy relativa.
 
 #### 7.1.3 Sistema Explicable (XAI)
 
