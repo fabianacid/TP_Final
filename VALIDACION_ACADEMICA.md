@@ -153,11 +153,11 @@ peso_i = accuracy_i / Σ accuracy_j   ∀ j ∈ modelos_activos
 **Implementación:**
 
 ```
-Split 1: Train[0:101]   → Test[101:126]
-Split 2: Train[0:126]   → Test[126:151]
-Split 3: Train[0:151]   → Test[151:176]
-Split 4: Train[0:176]   → Test[176:201]
-Split 5: Train[0:201]   → Test[201:252]
+Split 1: Train[0:202]   → Test[202:252]
+Split 2: Train[0:252]   → Test[252:302]
+Split 3: Train[0:302]   → Test[302:352]
+Split 4: Train[0:352]   → Test[352:402]
+Split 5: Train[0:402]   → Test[402:504]
 ```
 
 **Ventajas:**
@@ -587,7 +587,7 @@ Nuestro sistema:                    [====66.2%====]
 
 #### 6.2.1 Ventana Temporal Limitada
 
-**Limitación:** Datos históricos: 252 días (1 año).
+**Limitación:** Datos históricos: 504 días (2 años).
 
 **Consecuencia:**
 - No captura ciclos económicos completos

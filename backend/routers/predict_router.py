@@ -50,8 +50,8 @@ router = APIRouter(
 
 # Instanciar agentes (singleton pattern)
 # Usar 1 año de datos para tener suficientes features para el ensemble ML
-market_agent = MarketAgent(ventana_ma=20, periodo_historico="1y")
-model_agent = ModelAgent(ventana_entrenamiento=252)  # 1 año completo para mejor precisión
+market_agent = MarketAgent(ventana_ma=20, periodo_historico="2y")
+model_agent = ModelAgent(ventana_entrenamiento=504)  # 2 años para mayor precisión
 sentiment_agent = SentimentAgent()
 recommendation_agent = RecommendationAgent()
 alert_agent = AlertAgent(
