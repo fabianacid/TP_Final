@@ -24,7 +24,7 @@
 
 **Datos descargados**:
 ```python
-periodo = 1 año (1y)
+periodo = 2 años (2y)
 intervalo = 1 día
 datos = {precio_apertura, precio_cierre, precio_máximo, precio_mínimo, volumen}
 ```
@@ -397,7 +397,7 @@ Modelos opcionales (si las librerías están instaladas):
 
 **Ensemble probabilístico efectivo**: RF, GB, XGB y LGB aportan probabilidades continuas [0,1] vía predict_proba. LogisticRegression también. RidgeClassifier aporta 0 o 1 directamente.
 
-**Ventana de entrenamiento**: 252 días (1 año)
+**Ventana de entrenamiento**: 504 días (2 años)
 **Horizonte de predicción**: 3 días
 **Validación**: Time Series Split con 5 folds
 
@@ -527,15 +527,15 @@ precio_futuro ($152.50) > precio_actual ($150.00)
 ### 2.4 División de Datos
 
 ```
-Total datos: 252 días de trading (1 año)
+Total datos: 504 días de trading (2 años)
 
 Validación: Time Series Split con 5 folds
 
-Fold 1: Train[0:101]  → Test[101:126]  (101 días train, 25 días test)
-Fold 2: Train[0:126]  → Test[126:151]  (126 días train, 25 días test)
-Fold 3: Train[0:151]  → Test[151:176]  (151 días train, 25 días test)
-Fold 4: Train[0:176]  → Test[176:201]  (176 días train, 25 días test)
-Fold 5: Train[0:201]  → Test[201:252]  (201 días train, 51 días test)
+Fold 1: Train[0:202]  → Test[202:252]  (202 días train, 50 días test)
+Fold 2: Train[0:252]  → Test[252:302]  (252 días train, 50 días test)
+Fold 3: Train[0:302]  → Test[302:352]  (302 días train, 50 días test)
+Fold 4: Train[0:352]  → Test[352:402]  (352 días train, 50 días test)
+Fold 5: Train[0:402]  → Test[402:504]  (402 días train, 102 días test)
 
 Promedio final: métricas de los 5 folds
 ```
@@ -648,7 +648,7 @@ prob_ensemble = Σ(peso_i × prob_i)
 
 **Ejemplo numérico** (con modelos base siempre presentes):
 ```
-VALIDACIÓN CRUZADA (5 folds, ventana=252 días):
+VALIDACIÓN CRUZADA (5 folds, ventana=504 días):
 Modelo           F1     F2     F3     F4     F5    Accuracy_avg
 Linear           0.55   0.56   0.54   0.55   0.56   0.552
 Ridge            0.56   0.57   0.55   0.57   0.57   0.564
@@ -1925,7 +1925,7 @@ Usuario solicita análisis de TICKER
          ↓
 ┌────────────────────────────────────────┐
 │ 1. MarketAgent                         │
-│   - Descargar datos (1 año)           │
+│   - Descargar datos (2 años)          │
 │   - Calcular 35+ indicadores técnicos │
 │   - Detectar régimen de mercado       │
 │   - Generar señal unificada           │
@@ -2019,7 +2019,7 @@ Señal técnica: "neutral" (score = 0.05)
 
 **PASO 2 - ModelAgent**:
 ```
-Features construidos: 52 variables × 252 samples (1 año)
+Features construidos: 52 variables × 504 samples (2 años)
 
 Validación cruzada (5 folds, TimeSeriesSplit):
 Modelo           Accuracy_avg   (modelos base siempre presentes)

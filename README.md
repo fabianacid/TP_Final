@@ -100,7 +100,7 @@ graph TB
          │  • Ensemble de 4 base + 3 opcionales│
          │  • Linear, Ridge, RF, GBM          │
          │  • + XGBoost, LightGBM, LSTM (opt) │
-         │  • Ventana: 252 días (1 año)       │
+         │  • Ventana: 504 días (2 años)      │
          │  • Métricas: Accuracy, Precision,  │
          │    Recall, F1, AUC                 │
          └────────────┬───────────────────────┘
@@ -162,7 +162,7 @@ graph TB
      - LSTM (si pytorch disponible)
    - **Ensemble probabilístico efectivo**: RF, GB, XGB, LGB (los que aportan predict_proba)
    - Feature engineering con 52 características técnicas
-   - Ventana de entrenamiento: **252 días** (1 año)
+   - Ventana de entrenamiento: **504 días** (2 años)
    - Horizonte de predicción: **3 días**
    - Walk-forward validation temporal con 5 splits
    - Métricas de clasificación: **Accuracy**, **Precision**, **Recall**, **F1-Score**, **AUC-ROC**
@@ -733,7 +733,7 @@ password=SecurePass123!
       }
     },
     "parametros": {
-      "ventana": 252,
+      "ventana": 504,
       "n_features": 52,
       "n_modelos": "4-7 (según librerías instaladas)",
       "mejor_modelo": "varía según ticker y entrenamiento"
@@ -995,7 +995,7 @@ python tests/test_performance.py
 - **AUC: 58.6%** - Capacidad de discriminación del modelo
 - **Variabilidad**: Accuracy varía entre 53.1% (TSLA, META) y 63.3% (GOOGL) según el ticker
 - **Mejor rendimiento**: GOOGL (63.3%), AAPL (59.9%), JPM (58.5%)
-- **Nota**: Clasificación de dirección a 3 días (SUBIDA/BAJADA), umbral target 0.5%, ventana 252 días, 5 folds
+- **Nota**: Clasificación de dirección a 3 días (SUBIDA/BAJADA), umbral target 0.5%, ventana 504 días, 5 folds
 
 **Análisis de Sentimiento (NLP)**
 -  Ensemble de 4 modelos: FinBERT (40%), VADER (25%), Lexicón financiero (20%), TextBlob (15%)
