@@ -1,0 +1,68 @@
+{
+  "total_tests": 30,
+  "successful": 30,
+  "failed": 0,
+  "success_rate": 100.0,
+  "avg_latency": 4.654,
+  "max_latency": 5.328,
+  "min_latency": 4.313,
+  "agent_performance": {
+    "market_agent": {
+      "tests": 30,
+      "success": 30,
+      "rate": 100.0
+    },
+    "model_agent": {
+      "tests": 30,
+      "success": 30,
+      "rate": 100.0
+    },
+    "sentiment_agent": {
+      "tests": 30,
+      "success": 30,
+      "rate": 100.0
+    },
+    "recommendation_agent": {
+      "tests": 30,
+      "success": 30,
+      "rate": 100.0
+    },
+    "alert_agent": {
+      "tests": 30,
+      "success": 30,
+      "rate": 100.0
+    }
+  },
+  "metricas_clasificacion": {
+    "accuracy": {
+      "promedio": 0.5565,
+      "min": 0.4762,
+      "max": 0.619,
+      "std": 0.0426
+    },
+    "precision": {
+      "promedio": 0.5507,
+      "min": 0.3007,
+      "max": 0.7281,
+      "std": 0.1135
+    },
+    "recall": {
+      "promedio": 0.6588,
+      "min": 0.3704,
+      "max": 0.8199,
+      "std": 0.1474
+    },
+    "f1_score": {
+      "promedio": 0.5647,
+      "min": 0.3587,
+      "max": 0.663,
+      "std": 0.0939
+    },
+    "auc": {
+      "promedio": 0.5798,
+      "min": 0.4914,
+      "max": 0.6473,
+      "std": 0.0459
+    }
+  }
+}

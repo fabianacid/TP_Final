@@ -561,11 +561,11 @@ curl -X POST http://localhost:8000/auth/forgot-password \
 
 #### Paso 2: Obtener el Token de los Logs
 
-Como SMTP no está configurado, el token se imprime en los logs del backend. Busca en la consola donde ejecutaste `uvicorn`:
+Como SMTP no está configurado, el token se imprime en los logs del backend. Busca en la consola donde ejecutaste `uvicorn` o en el archivo `logs/app.log`:
 
 ```bash
 # Buscar en logs del backend
-grep "Token de reseteo" <archivo_logs>
+grep "Token de reseteo" logs/app.log
 
 # Verás algo como:
 # INFO - Token de reseteo para tu_usuario: ABC123XYZ456...
@@ -1263,7 +1263,7 @@ El sistema está diseñado para funcionar sin SMTP. El token aparece en los logs
 # INFO - Token de reseteo para tu_usuario: ABC123XYZ456...
 
 # 2. O busca en logs si los guardaste
-grep "Token de reseteo" backend.log
+grep "Token de reseteo" logs/app.log
 
 # 3. Ejemplo de salida:
 # 2026-02-06 14:12:11 - backend.email_service - INFO - Token de reseteo para demo_test: Id6SNF3G-Ua7ev4jvvHU0tb4WvkcdPoEAHujZzPob__3quId16e5e2kGFh0tEapA
@@ -1287,9 +1287,17 @@ SMTP_PASSWORD=tu_app_password  # No uses tu contraseña regular
 ### Logs y Debugging
 
 #### Ver logs del backend:
-El backend imprime logs en la terminal. Busca:
+El backend imprime logs en la terminal y los guarda en `logs/app.log` (rotación diaria, 7 días de historial). Busca:
 -  `INFO: Application startup complete` - Todo OK
 -  `ERROR:` - Indica un problema específico
+
+```bash
+# Ver logs en tiempo real
+tail -f logs/app.log
+
+# Buscar errores
+grep "ERROR" logs/app.log
+```
 
 #### Modo debug detallado:
 ```bash

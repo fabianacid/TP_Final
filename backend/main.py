@@ -19,6 +19,8 @@ La aplicación expone:
 - /docs: Documentación Swagger UI
 """
 import logging
+import logging.handlers
+import os
 from datetime import datetime
 from contextlib import asynccontextmanager
 
@@ -31,9 +33,23 @@ from .database import init_db
 from .routers import auth_router, predict_router, alerts_router
 
 # Configuración de logging
+LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format=LOG_FORMAT,
+    handlers=[
+        logging.StreamHandler(),
+        logging.handlers.TimedRotatingFileHandler(
+            os.path.join(LOG_DIR, "app.log"),
+            when="midnight",
+            backupCount=7,
+            encoding="utf-8"
+        )
+    ]
 )
 logger = logging.getLogger(__name__)
 

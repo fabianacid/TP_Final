@@ -1,0 +1,63 @@
+[
+  {
+    "concurrent_users": 1,
+    "total_requests": 1,
+    "successful": 1,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_time_seconds": 4.61,
+    "requests_per_second": 0.22,
+    "avg_latency_ms": 4602.36,
+    "min_latency_ms": 4602.36,
+    "max_latency_ms": 4602.36,
+    "stdev_latency_ms": 0
+  },
+  {
+    "concurrent_users": 5,
+    "total_requests": 5,
+    "successful": 5,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_time_seconds": 14.47,
+    "requests_per_second": 0.35,
+    "avg_latency_ms": 11501.75,
+    "min_latency_ms": 7060.44,
+    "max_latency_ms": 14465.13,
+    "stdev_latency_ms": 4052.97
+  },
+  {
+    "concurrent_users": 10,
+    "total_requests": 10,
+    "successful": 10,
+    "failed": 0,
+    "success_rate": 100.0,
+    "total_time_seconds": 26.26,
+    "requests_per_second": 0.38,
+    "avg_latency_ms": 26247.79,
+    "min_latency_ms": 26237.85,
+    "max_latency_ms": 26255.54,
+    "stdev_latency_ms": 6.65
+  },
+  {
+    "concurrent_users": 25,
+    "total_requests": 25,
+    "successful": 1,
+    "failed": 24,
+    "success_rate": 4.0,
+    "total_time_seconds": 32.11,
+    "requests_per_second": 0.78,
+    "avg_latency_ms": 6284.38,
+    "min_latency_ms": 6284.38,
+    "max_latency_ms": 6284.38,
+    "stdev_latency_ms": 0
+  },
+  {
+    "concurrent_users": 50,
+    "total_requests": 50,
+    "successful": 0,
+    "failed": 50,
+    "success_rate": 0.0,
+    "total_time_seconds": 32.16,
+    "requests_per_second": 1.55
+  }
+]
