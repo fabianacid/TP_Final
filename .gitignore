@@ -76,3 +76,17 @@ htmlcov/
 test_results/CAPITULO_4_Y_5_TESIS.md
 test_results/INSTRUCCIONES_OVERLEAF.md
 test_results/capitulos_4_y_5.tex
+
+# Archivos LaTeX
+*.tex
+*.aux
+*.log
+*.toc
+*.lof
+*.lot
+*.bbl
+*.blg
+*.out
+*.synctex.gz
+*.fls
+*.fdb_latexmk
